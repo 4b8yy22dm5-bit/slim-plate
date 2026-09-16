@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="瘦身小餐盤">
+<meta name="mobile-web-app-capable" content="yes">
+
+<meta name="theme-color" content="#f5f8f5">
+<title>我的瘦身小餐盤 V2.4.2.1 · 手機版</title>
+<style>
+:root{
+  --bg:#f4f7f4;--card:#fff;--text:#202a22;--muted:#748078;--line:#e4ebe5;
+  --accent:#2f7d49;--soft:#e5f2e8;--warn:#a56b1e;--danger:#b64d4d;--shadow:0 10px 28px rgba(40,65,47,.08)
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;color:var(--text)}
+.app{max-width:500px;margin:auto;padding:16px 14px 104px}
+h1{font-size:25px;margin:6px 0 4px}
+.small,.note{color:var(--muted);font-size:12px;line-height:1.55}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.metric{padding:12px;border-radius:15px;background:#fafcf9;border:1px solid var(--line)}
+.metric b{font-size:22px}.label{font-size:12px;color:var(--muted);margin-bottom:5px}
+button{border:0;border-radius:14px;padding:12px 14px;font-size:15px;font-weight:800;cursor:pointer}
+.primary{background:var(--accent);color:#fff}.secondary{background:var(--soft);color:var(--accent)}.ghost{background:#f1f4f1;color:var(--text)}
+.warn{background:#fff3df;color:var(--warn)}
+.danger-btn{background:#fdeaea;color:var(--danger);padding:6px 10px;font-size:12px;border-radius:10px}
+input,select{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);font-size:16px;outline:none;background:white;color:var(--text)}
+input:focus,select:focus{border-color:#9ec7aa}
+.section{font-size:17px;font-weight:850;margin-bottom:10px}
+.photo{border:2px dashed #ccd8cf;background:#fbfdfb;border-radius:18px;padding:16px;text-align:center}
+.photo img{width:100%;max-height:260px;object-fit:cover;border-radius:14px;margin-top:10px;display:none}
+.result{background:linear-gradient(135deg,#edf7ef,#fbfdfb);border:1px solid #d6eadb}
+.big{font-size:34px;font-weight:900;letter-spacing:-1px}
+.progress{height:9px;background:#edf1ee;border-radius:99px;overflow:hidden;margin-top:8px}.progress span{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s ease}
+.water{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(500px,100%);display:grid;grid-template-columns:repeat(4,1fr);background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom));z-index:50}
+.tab{background:none;color:var(--muted);font-size:12px}.tab.active{color:var(--accent)}
+.screen{display:none}.screen.active{display:block}
+.pill{font-size:11px;padding:5px 9px;border-radius:99px;background:#eef6ef;color:var(--accent)}
+.status-good{background:#e8f5eb;color:#246c3d}.status-warn{background:#fff3df;color:#966218}.status-bad{background:#fdeaea;color:#a33f3f}
+.status{display:inline-block;font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px}
+.form-row{margin:10px 0}.form-row label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.week-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.advice{padding:12px;border-radius:15px;background:#f8faf8;border:1px solid var(--line);line-height:1.6;font-size:14px}
+.tweak-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
+.tweak-row button{padding:10px 14px;min-width:48px}
+.tweak-row input[type="number"]{width:100px;text-align:center;padding:10px}
+.check-row{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px}
+.check-row input{width:auto;padding:0}
+.meal-row-actions{display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="row between">
+    <div><h1>我的瘦身小餐盤</h1><div class="small" id="dateText"></div></div>
+    <span class="pill">V2.4.2 · 手機版</span>
+  </div>
+  <div class="note" style="margin:4px 0 0">手機請用「檔案／檔案管理」→ 用 Safari 或 Chrome 開啟；聊天預覽常無法執行。</div>
+
+  <section id="home" class="screen active">
+    <div class="card">
+      <div class="row between">
+        <div>
+          <div class="label">今日體重</div>
+          <div class="big"><span id="wNow">--</span><span style="font-size:16px"> kg</span></div>
+          <div class="small" id="wTrend">尚未輸入</div>
+        </div>
+        <button class="secondary" onclick="show('weight')">輸入體重</button>
+      </div>
+    </div>
+
+    <div class="card result">
+      <div class="row between">
+        <div class="section" style="margin:0">今日熱量</div>
+        <span id="todayStatus" class="status status-good">等待資料</span>
+      </div>
+      <div class="grid3" style="margin-top:12px">
+        <div class="metric"><div class="label">攝取</div><b id="todayIn">0</b><div class="small">kcal</div></div>
+        <div class="metric"><div class="label">估計消耗</div><b id="todayOut">--</b><div class="small">kcal</div></div>
+        <div class="metric"><div class="label">熱量差</div><b id="todayDiff">--</b><div class="small">kcal</div></div>
+      </div>
+      <div id="kcalProgressWrap" style="display:none;margin-top:10px">
+        <div class="row between"><span class="small">攝取 vs 目標</span><span class="small" id="kcalProgressLabel"></span></div>
+        <div class="progress"><span id="kcalProgressBar" style="width:0%"></span></div>
+      </div>
+      <div class="note" style="margin-top:10px">熱量差 = 今日攝取 − 估計消耗。負值代表熱量赤字。</div>
+    </div>
+
+    <div class="card">
+      <div class="section">今日營養</div>
+      <div class="grid2">
+        <div class="metric">
+          <div class="label">🥩 蛋白質</div>
+          <b><span id="dayP">0</span></b><div class="small">g <span id="dayPTarget"></span></div>
+          <div id="proteinProgressWrap" style="display:none">
+            <div class="progress"><span id="proteinProgressBar" style="width:0%"></span></div>
+          </div>
+        </div>
+        <div class="metric"><div class="label">🍚 碳水</div><b><span id="dayC">0</span></b><div class="small">g</div></div>
+        <div class="metric"><div class="label">🥑 脂肪</div><b><span id="dayF">0</span></b><div class="small">g</div></div>
+        <div class="metric"><div class="label">🥬 纖維</div><b><span id="dayFi">0</span></b><div class="small">g</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row between">
+        <div>
+          <div class="label">💧 今日飲水</div>
+          <div style="font-size:26px;font-weight:900"><span id="water">0</span> ml</div>
+          <div class="small" id="waterGoalLabel"></div>
+        </div>
+        <button class="ghost" onclick="resetWater()">歸零</button>
+      </div>
+      <div class="progress" style="margin-top:10px"><span id="waterProgressBar" style="width:0%"></span></div>
+      <div class="water" style="margin-top:12px">
+        <button class="secondary" onclick="addWater(250)">+250</button>
+        <button class="secondary" onclick="addWater(500)">+500</button>
+        <button class="secondary" onclick="addWater(750)">+750</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row between">
+        <div class="section" style="margin:0">今天餐點</div>
+        <button class="primary" onclick="show('meal')">＋拍照記錄</button>
+      </div>
+      <div id="mealList" class="note" style="margin-top:10px">尚未記錄餐點。</div>
+    </div>
+
+    <div class="card">
+      <div class="row between">
+        <div>
+          <div class="section" style="margin:0">本週進度</div>
+          <div class="small">以最近 7 天資料計算</div>
+        </div>
+        <button class="secondary" onclick="show('week')">查看週報</button>
+      </div>
+      <div id="weekPreview" style="margin-top:12px" class="note">累積 7 天後會開始產生週報。</div>
+    </div>
+  </section>
+
+  <section id="meal" class="screen">
+    <div class="card">
+      <div class="section">1. 選擇餐別</div>
+      <div class="form-row">
+        <select id="mealType">
+          <option value="早餐">早餐</option>
+          <option value="午餐">午餐</option>
+          <option value="晚餐">晚餐</option>
+          <option value="點心">點心 / 宵夜</option>
+        </select>
+      </div>
+      <div class="section" style="margin-top:14px">2. 輸入主食 / 主菜</div>
+      <input id="mainFood" placeholder="例如：麻醬麵、肉燥乾麵、白飯、雞腿便當">
+      <div class="note" style="margin-top:7px">你只要輸入最主要的食物名稱，不用自己查熱量。常見食物會用各自獨立的營養資料估算。</div>
+      <label class="check-row">
+        <input type="checkbox" id="addSidesCheck">
+        <span>加上常見配菜估算（約 +300 kcal）</span>
+      </label>
+    </div>
+
+    <div class="card">
+      <div class="section">3. 拍整餐照片</div>
+      <div class="photo">
+        <div>📷 可從相簿選圖，或拍照</div>
+        <div class="note" style="margin-top:6px">手機請選「照片圖庫／檔案」，不要只用相機</div>
+        <input id="photoInput" style="margin-top:10px" type="file" accept="image/*" onchange="preview(event)">
+        <img id="photo" alt="餐點預覽">
+        <button type="button" id="clearPhotoBtn" class="ghost" style="width:100%;margin-top:10px;display:none" onclick="clearPhoto()">清除照片</button>
+      </div>
+      <button class="primary" style="width:100%;margin-top:14px" onclick="estimateMeal()">自動估算整餐</button>
+      <div class="note" style="margin-top:10px">目前試用版先用主食名稱 + 常見配菜份量粗估。正式版串接視覺 AI 後，可直接從照片辨識肉、菜、蛋、豆製品及大致用油量。</div>
+    </div>
+
+    <div id="estimateBox" class="card result" style="display:none">
+      <div class="row between"><div class="section" style="margin:0">估算結果</div><span class="pill">粗估即可</span></div>
+      <div style="margin-top:12px"><span class="big" id="eKcal">0</span> kcal</div>
+      <div class="small" id="rangeText"></div>
+      <div class="tweak-row">
+        <button type="button" class="secondary" onclick="tweakKcal(-50)">−50</button>
+        <input type="number" id="eKcalInput" step="10" min="0" onchange="setKcalFromInput()" oninput="setKcalFromInput()">
+        <button type="button" class="secondary" onclick="tweakKcal(50)">+50</button>
+        <span class="small">調整熱量（巨量營養素等比縮放）</span>
+      </div>
+      <hr>
+      <div class="grid2">
+        <div class="metric"><div class="label">蛋白質</div><b><span id="eP">0</span>g</b></div>
+        <div class="metric"><div class="label">碳水</div><b><span id="eC">0</span>g</b></div>
+        <div class="metric"><div class="label">脂肪</div><b><span id="eF">0</span>g</b></div>
+        <div class="metric"><div class="label">纖維</div><b><span id="eFi">0</span>g</b></div>
+      </div>
+      <div class="note" id="basisText" style="margin-top:10px"></div>
+      <button class="primary" style="width:100%;margin-top:14px" onclick="saveMeal()">加入今天</button>
+    </div>
+  </section>
+
+  <section id="weight" class="screen">
+    <div class="card">
+      <div class="section">今天早晨體重</div>
+      <input id="weightInput" type="number" step="0.1" placeholder="例如 86.4">
+      <button class="primary" style="width:100%;margin-top:12px" onclick="saveWeight()">儲存</button>
+    </div>
+    <div class="card">
+      <div class="section">最近紀錄</div>
+      <div id="weightHistory" class="note">尚無紀錄</div>
+    </div>
+  </section>
+
+  <section id="week" class="screen">
+    <div class="card result">
+      <div class="row between">
+        <div>
+          <div class="section" style="margin:0">本週減重週報</div>
+          <div class="small">最近 7 天</div>
+        </div>
+        <span id="weekStatus" class="status status-good">資料不足</span>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <div class="metric"><div class="label">7日平均體重</div><b id="avgWeight">--</b><div class="small">kg</div></div>
+        <div class="metric"><div class="label">相較前週</div><b id="weightChange">--</b><div class="small">kg</div></div>
+        <div class="metric"><div class="label">平均攝取</div><b id="avgIntake">--</b><div class="small">kcal / 日</div></div>
+        <div class="metric"><div class="label">平均熱量差</div><b id="avgDeficit">--</b><div class="small">kcal / 日</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section">營養平均</div>
+      <div class="grid2">
+        <div class="metric"><div class="label">蛋白質</div><b id="wkP">--</b><div class="small">g / 日</div></div>
+        <div class="metric"><div class="label">碳水</div><b id="wkC">--</b><div class="small">g / 日</div></div>
+        <div class="metric"><div class="label">脂肪</div><b id="wkF">--</b><div class="small">g / 日</div></div>
+        <div class="metric"><div class="label">纖維</div><b id="wkFi">--</b><div class="small">g / 日</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section">下週建議</div>
+      <div id="adviceBox" class="advice">至少記錄數天體重與餐點後，系統才會給較有意義的建議。</div>
+    </div>
+  </section>
+
+  <section id="profile" class="screen">
+    <div class="card">
+      <div class="section">基本資料</div>
+      <div class="grid2">
+        <div class="form-row"><label>性別</label><select id="sex"><option value="male">男</option><option value="female">女</option></select></div>
+        <div class="form-row"><label>年齡</label><input id="age" type="number" value="40"></div>
+        <div class="form-row"><label>身高 cm</label><input id="height" type="number" value="170"></div>
+        <div class="form-row"><label>目前體重 kg</label><input id="profileWeight" type="number" step="0.1" value="75"></div>
+        <div class="form-row"><label>目標體重 kg</label><input id="goalWeight" type="number" step="0.1" value="68"></div>
+        <div class="form-row"><label>活動程度</label>
+          <select id="activity">
+            <option value="1.2">久坐</option>
+            <option value="1.375">輕度活動</option>
+            <option value="1.55" selected>中度活動</option>
+            <option value="1.725">高度活動</option>
+          </select>
+        </div>
+        <div class="form-row" style="grid-column:1 / -1"><label>每日飲水目標 ml</label><input id="waterGoal" type="number" step="50" value="2000"></div>
+      </div>
+      <button class="primary" style="width:100%" onclick="saveProfile()">計算每日目標</button>
+    </div>
+
+    <div class="card result">
+      <div class="section">你的估算基準</div>
+      <div class="grid2">
+        <div class="metric"><div class="label">BMR 基礎代謝</div><b id="bmrOut">--</b><div class="small">kcal</div></div>
+        <div class="metric"><div class="label">TDEE 每日消耗</div><b id="tdeeOut">--</b><div class="small">kcal</div></div>
+        <div class="metric"><div class="label">建議減脂攝取</div><b id="targetOut">--</b><div class="small">kcal / 日</div></div>
+        <div class="metric"><div class="label">蛋白質目標</div><b id="proteinOut">--</b><div class="small">g / 日</div></div>
+      </div>
+      <div class="note" style="margin-top:10px">BMR 使用 Mifflin-St Jeor 公式估算，TDEE 依活動量推估。這些是管理用估算值，不等同醫療或營養師個別處方。</div>
+    </div>
+
+    <div class="card">
+      <div class="section">資料備份（很重要）</div>
+      <div class="note">換手機或網址變更前，請先匯出。檔案只存在你自己的手機／電腦。</div>
+      <button class="primary" style="width:100%;margin-top:12px" type="button" onclick="exportBackup()">匯出備份</button>
+      <button class="secondary" style="width:100%;margin-top:8px" type="button" onclick="document.getElementById('importFile').click()">從檔案匯入備份</button>
+      <input id="importFile" type="file" accept="application/json,.json,text/plain" style="display:none" onchange="importBackupFile(event)">
+      <div class="form-row" style="margin-top:12px">
+        <label>或貼上備份文字後匯入</label>
+        <textarea id="importText" rows="4" placeholder="把備份 JSON 貼在這裡" style="width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);font-size:13px;font-family:ui-monospace,monospace"></textarea>
+      </div>
+      <button class="secondary" style="width:100%" type="button" onclick="importBackupText()">匯入貼上的備份</button>
+      <div class="note" id="backupStatus" style="margin-top:10px"></div>
+    </div>
+  </section>
+</div>
+
+<nav class="tabs">
+  <button class="tab active" data-t="home" onclick="show('home')">🏠<br>首頁</button>
+  <button class="tab" data-t="meal" onclick="show('meal')">📷<br>餐點</button>
+  <button class="tab" data-t="week" onclick="show('week')">📊<br>週報</button>
+  <button class="tab" data-t="profile" onclick="show('profile')">⚙️<br>設定</button>
+</nav>
+
+<script>
+function esc(s){
+  return String(s==null?"":s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+function showBootError(err){
+  try{
+    const ban=document.createElement("div");
+    ban.style.cssText="position:fixed;inset:0;z-index:9999;background:#fff;color:#b64d4d;padding:24px;font:16px/1.5 -apple-system,sans-serif";
+    ban.innerHTML="<b>啟動失敗</b><pre style=\"white-space:pre-wrap;font-size:13px;margin-top:12px\">"+esc(err&&err.stack||err)+"</pre><p style=\"color:#748078;font-size:13px\">請用 Safari 或 Chrome 開啟此 .html 檔（不要用聊天內建預覽）。</p>";
+    document.body.appendChild(ban);
+  }catch(e){alert(String(err))}
+}
+/** Local calendar date YYYY-MM-DD (Taiwan midnight safe; avoids UTC toISOString drift). */
+function localDateISO(d){
+  const x=d instanceof Date?d:new Date();
+  const y=x.getFullYear();
+  const m=String(x.getMonth()+1).padStart(2,"0");
+  const day=String(x.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+const todayISO=()=>localDateISO(new Date());
+function dstr(d){return localDateISO(d)}
+
+let state={
+  waterByDate:{},
+  meals:[],
+  weights:[],
+  profile:{sex:"male",age:40,height:170,weight:75,goal:68,activity:1.55,bmr:null,tdee:null,target:null,protein:null,waterGoal:2000}
+};
+try{
+  const saved=JSON.parse(localStorage.getItem("slimV2")||"null");
+  if(saved) state={...state,...saved,profile:{...state.profile,...(saved.profile||{})}};
+  if(state.profile.waterGoal==null||!state.profile.waterGoal) state.profile.waterGoal=2000;
+}catch(e){}
+let currentEstimate=null;
+let estimateBase=null; // original estimate before kcal tweaks
+
+const staples=[
+  // 早餐常見
+  {keys:["原味蛋餅","蛋餅"],kcal:320,p:11,c:36,f:14,fi:2,label:"原味蛋餅 1份"},
+  {keys:["起司蛋餅"],kcal:400,p:17,c:37,f:20,fi:2,label:"起司蛋餅 1份"},
+  {keys:["培根蛋餅"],kcal:410,p:18,c:37,f:21,fi:2,label:"培根蛋餅 1份"},
+  {keys:["蘿蔔糕"],kcal:250,p:5,c:42,f:7,fi:2,label:"蘿蔔糕 1份"},
+  {keys:["飯糰"],kcal:430,p:11,c:68,f:13,fi:3,label:"早餐飯糰 1顆"},
+  {keys:["鐵板麵"],kcal:500,p:14,c:72,f:17,fi:4,label:"鐵板麵 1份"},
+  {keys:["吐司"],kcal:180,p:6,c:32,f:3,fi:2,label:"白吐司 2片"},
+  // 咖啡／飲料（避免未命中時被估成 350kcal）
+  {keys:["無糖美式","美式咖啡","冰美式","熱美式","美式"],kcal:8,p:0.3,c:1.5,f:0,fi:0,label:"美式咖啡 1杯（約12oz／無糖）"},
+  {keys:["黑咖啡","手沖咖啡","義式浓缩","義式濃縮","espresso","Espresso"],kcal:5,p:0.3,c:1,f:0,fi:0,label:"黑咖啡／濃縮 1杯"},
+  {keys:["無糖拿鐵","拿鐵"],kcal:150,p:8,c:12,f:8,fi:0,label:"拿鐵 1杯（鮮奶，約中杯）"},
+  {keys:["卡布奇諾","卡布"],kcal:120,p:6,c:10,f:6,fi:0,label:"卡布奇諾 1杯（約中杯）"},
+  {keys:["摩卡"],kcal:250,p:8,c:30,f:10,fi:1,label:"摩卡 1杯（約中杯）"},
+  {keys:["無糖茶","綠茶","烏龍茶","紅茶","麥茶"],kcal:2,p:0,c:0.5,f:0,fi:0,label:"無糖茶 1杯"},
+  {keys:["無糖豆漿"],kcal:100,p:9,c:6,f:5,fi:1,label:"無糖豆漿 300ml"},
+  {keys:["有糖豆漿"],kcal:160,p:8,c:24,f:5,fi:1,label:"有糖豆漿 300ml"},
+  {keys:["鮮奶","牛奶"],kcal:190,p:10,c:15,f:10,fi:0,label:"全脂鮮奶 300ml"},
+  {keys:["茶葉蛋","滷蛋","雞蛋"],kcal:75,p:6.5,c:1,f:5,fi:0,label:"蛋 1顆"},
+
+  // 麵食
+  {keys:["麻醬麵"],kcal:520,p:16,c:72,f:19,fi:4,label:"麻醬麵 1碗"},
+  {keys:["炸醬麵"],kcal:560,p:22,c:78,f:18,fi:5,label:"炸醬麵 1碗"},
+  {keys:["肉燥乾麵","肉燥麵"],kcal:500,p:18,c:74,f:16,fi:4,label:"肉燥乾麵 1碗"},
+  {keys:["陽春乾麵","陽春麵"],kcal:390,p:12,c:70,f:7,fi:3,label:"陽春乾麵 1碗"},
+  {keys:["牛肉麵"],kcal:680,p:32,c:82,f:24,fi:5,label:"牛肉麵 1碗"},
+  {keys:["餛飩麵"],kcal:460,p:20,c:68,f:12,fi:3,label:"餛飩麵 1碗"},
+  {keys:["鍋燒意麵"],kcal:610,p:24,c:69,f:26,fi:4,label:"鍋燒意麵 1碗"},
+
+  // 主食 / 單品
+  {keys:["地瓜"],kcal:120,p:2,c:28,f:.2,fi:3,label:"地瓜 100g"},
+  {keys:["白飯","飯"],kcal:260,p:5,c:57,f:.5,fi:1,label:"白飯 1碗"},
+  {keys:["雞胸"],kcal:165,p:31,c:0,f:4,fi:0,label:"雞胸 100g"},
+  {keys:["雞腿"],kcal:220,p:24,c:0,f:13,fi:0,label:"雞腿 1份"},
+  {keys:["豆腐"],kcal:85,p:8,c:2,f:5,fi:1,label:"豆腐 100g"},
+
+  // 整份餐點
+  {keys:["雞腿便當"],kcal:720,p:35,c:82,f:27,fi:7,label:"雞腿便當 1份"},
+  {keys:["排骨便當"],kcal:760,p:32,c:85,f:31,fi:6,label:"排骨便當 1份"},
+  {keys:["雞胸便當"],kcal:580,p:42,c:75,f:12,fi:7,label:"雞胸便當 1份"},
+  {keys:["便當"],kcal:650,p:30,c:80,f:24,fi:6,label:"一般便當 1份"}
+];
+
+const SIDES={kcal:300,p:24,c:14,f:17,fi:5};
+
+function safeSave(){try{localStorage.setItem("slimV2",JSON.stringify(state))}catch(e){}}
+function daysAgo(n){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-n);return d}
+function show(id){
+  document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.t===id));
+  if(id==="home") refreshHome();
+  if(id==="week") renderWeek();
+  if(id==="weight") renderWeights();
+  if(id==="profile") renderProfile();
+  if(id==="meal" && !currentEstimate) clearPhoto();
+}
+function clearPhoto(){
+  const im=document.getElementById("photo");
+  if(im){ im.removeAttribute("src"); im.style.display="none"; }
+  const inp=document.getElementById("photoInput");
+  if(inp) inp.value="";
+  const btn=document.getElementById("clearPhotoBtn");
+  if(btn) btn.style.display="none";
+}
+function preview(e){
+  const f=e.target.files[0]; if(!f){clearPhoto();return;}
+  const r=new FileReader();
+  r.onload=x=>{
+    const im=document.getElementById("photo");
+    im.src=x.target.result;
+    im.style.display="block";
+    const btn=document.getElementById("clearPhotoBtn");
+    if(btn) btn.style.display="block";
+  };
+  r.readAsDataURL(f);
+}
+function stapleFor(name){
+  const clean=(name||"").trim();
+  // Flatten keys with their staple, sort longest key first to reduce false matches (e.g. 白飯 before 飯)
+  const pairs=[];
+  for(const s of staples){
+    for(const k of s.keys) pairs.push({k,s});
+  }
+  pairs.sort((a,b)=>b.k.length-a.k.length);
+  for(const {k,s} of pairs){
+    if(clean.includes(k) || k.includes(clean)) return s;
+  }
+  return {kcal:350,p:15,c:45,f:12,fi:3,label:"未辨識食物，採一般單品 1 份估算"};
+}
+function renderEstimateUI(){
+  if(!currentEstimate)return;
+  document.getElementById("eKcal").textContent=currentEstimate.kcal;
+  document.getElementById("eKcalInput").value=currentEstimate.kcal;
+  document.getElementById("eP").textContent=currentEstimate.p;
+  document.getElementById("eC").textContent=currentEstimate.c;
+  document.getElementById("eF").textContent=currentEstimate.f;
+  document.getElementById("eFi").textContent=currentEstimate.fi;
+  const name=currentEstimate.name||"";
+  const spread = /豆漿|鮮奶|牛奶|蛋$|茶葉蛋|滷蛋|美式|咖啡|濃縮|無糖茶|綠茶|烏龍|紅茶|麥茶/.test(name) ? 0.10 : 0.15;
+  document.getElementById("rangeText").textContent=
+    `合理範圍約 ${Math.round(currentEstimate.kcal*(1-spread))}～${Math.round(currentEstimate.kcal*(1+spread))} kcal`;
+  document.getElementById("basisText").textContent="估算基準："+currentEstimate.basis;
+}
+function applyKcalScale(newKcal){
+  if(!estimateBase||!currentEstimate)return;
+  newKcal=Math.max(0,Math.round(Number(newKcal)||0));
+  const baseK=estimateBase.kcal||1;
+  const ratio=baseK>0?newKcal/baseK:1;
+  currentEstimate.kcal=newKcal;
+  currentEstimate.p=Math.round(estimateBase.p*ratio);
+  currentEstimate.c=Math.round(estimateBase.c*ratio);
+  currentEstimate.f=Math.round(estimateBase.f*ratio);
+  currentEstimate.fi=Math.round(estimateBase.fi*ratio);
+  renderEstimateUI();
+}
+function tweakKcal(delta){
+  if(!currentEstimate)return;
+  applyKcalScale(currentEstimate.kcal+delta);
+}
+function setKcalFromInput(){
+  const v=parseFloat(document.getElementById("eKcalInput").value);
+  if(isNaN(v))return;
+  applyKcalScale(v);
+}
+function estimateMeal(){
+  const name=document.getElementById("mainFood").value.trim();
+  if(!name){alert("請先輸入主食或主菜名稱");return;}
+  const s=stapleFor(name);
+  const addSides=!!document.getElementById("addSidesCheck").checked;
+
+  let kcal=s.kcal, p=s.p, c=s.c, f=s.f, fi=s.fi;
+  let basis=s.label;
+
+  if(addSides){
+    kcal+=SIDES.kcal; p+=SIDES.p; c+=SIDES.c; f+=SIDES.f; fi+=SIDES.fi;
+    basis += " + 常見配菜";
+  }
+
+  currentEstimate={
+    name,
+    kcal:Math.round(kcal),
+    p:Math.round(p),
+    c:Math.round(c),
+    f:Math.round(f),
+    fi:Math.round(fi),
+    basis
+  };
+  estimateBase={...currentEstimate};
+
+  renderEstimateUI();
+  document.getElementById("estimateBox").style.display="block";
+}
+function saveMeal(){
+  if(!currentEstimate)return;
+  const mealType=document.getElementById("mealType").value;
+  const id="m_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+  state.meals.push({...currentEstimate,id,mealType,date:todayISO(),time:new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"})});
+  safeSave(); currentEstimate=null; estimateBase=null;
+  document.getElementById("estimateBox").style.display="none";
+  document.getElementById("mainFood").value="";
+  document.getElementById("addSidesCheck").checked=false;
+  clearPhoto();
+  setDefaultMealType(); show("home");
+}
+function deleteMeal(idOrIndex){
+  // Prefer id match; fall back to index for older meals without id
+  let idx=-1;
+  if(typeof idOrIndex==="string"){
+    idx=state.meals.findIndex(m=>m.id===idOrIndex);
+  }else if(typeof idOrIndex==="number" && !Number.isNaN(idOrIndex)){
+    idx=idOrIndex;
+  }
+  if(idx<0 || idx>=state.meals.length){
+    alert("找不到要刪的餐點，請重新整理後再試");
+    return;
+  }
+  if(!confirm("確定刪除這筆餐點？"))return;
+  state.meals.splice(idx,1);
+  safeSave();
+  refreshHome();
+}
+function addWater(x){const d=todayISO();state.waterByDate[d]=(state.waterByDate[d]||0)+x;safeSave();refreshHome()}
+function resetWater(){state.waterByDate[todayISO()]=0;safeSave();refreshHome()}
+function saveWeight(){
+  const v=parseFloat(document.getElementById("weightInput").value);
+  if(!v || v<30 || v>300){alert("請輸入合理體重");return;}
+  const d=todayISO();
+  state.weights=state.weights.filter(x=>x.date!==d);
+  state.weights.push({date:d,value:v});
+  state.weights.sort((a,b)=>a.date.localeCompare(b.date));
+  state.profile.weight=v;
+  safeSave(); document.getElementById("weightInput").value=""; show("home");
+}
+function saveProfile(){
+  const p=state.profile;
+  p.sex=document.getElementById("sex").value;
+  p.age=+document.getElementById("age").value;
+  p.height=+document.getElementById("height").value;
+  p.weight=+document.getElementById("profileWeight").value;
+  p.goal=+document.getElementById("goalWeight").value;
+  p.activity=+document.getElementById("activity").value;
+  const wg=+document.getElementById("waterGoal").value;
+  p.waterGoal=(wg&&wg>0)?wg:2000;
+  if(!p.age||!p.height||!p.weight){alert("請完整輸入基本資料");return;}
+  p.bmr=10*p.weight+6.25*p.height-5*p.age+(p.sex==="male"?5:-161);
+  p.tdee=p.bmr*p.activity;
+  p.target=Math.max(p.sex==="male"?1500:1200,p.tdee-450);
+  p.protein=Math.round(p.weight*1.6);
+  safeSave();setDefaultMealType();renderProfile();refreshHome();
+}
+function renderProfile(){
+  const p=state.profile;
+  document.getElementById("sex").value=p.sex;
+  document.getElementById("age").value=p.age;
+  document.getElementById("height").value=p.height;
+  document.getElementById("profileWeight").value=p.weight;
+  document.getElementById("goalWeight").value=p.goal;
+  document.getElementById("activity").value=p.activity;
+  document.getElementById("waterGoal").value=p.waterGoal||2000;
+  document.getElementById("bmrOut").textContent=p.bmr?Math.round(p.bmr):"--";
+  document.getElementById("tdeeOut").textContent=p.tdee?Math.round(p.tdee):"--";
+  document.getElementById("targetOut").textContent=p.target?Math.round(p.target):"--";
+  document.getElementById("proteinOut").textContent=p.protein||"--";
+}
+function todaysMeals(){return state.meals.filter(m=>m.date===todayISO())}
+function sumMeals(meals){return meals.reduce((a,m)=>({kcal:a.kcal+m.kcal,p:a.p+m.p,c:a.c+m.c,f:a.f+m.f,fi:a.fi+m.fi}),{kcal:0,p:0,c:0,f:0,fi:0})}
+function latestWeight(){
+  if(!state.weights.length)return null;
+  return state.weights[state.weights.length-1];
+}
+function progressPct(val,goal){
+  if(!goal||goal<=0)return 0;
+  return Math.min(100,Math.round((val/goal)*100));
+}
+function refreshHome(){
+  const tw=latestWeight();
+  document.getElementById("wNow").textContent=tw?tw.value.toFixed(1):"--";
+  if(state.weights.length>1){
+    const a=state.weights[state.weights.length-1].value,b=state.weights[state.weights.length-2].value,d=a-b;
+    document.getElementById("wTrend").textContent=`較前次 ${d>=0?"+":""}${d.toFixed(1)} kg`;
+  }else document.getElementById("wTrend").textContent=tw?"已開始追蹤":"尚未輸入";
+
+  const meals=todaysMeals(),sum=sumMeals(meals),p=state.profile;
+  document.getElementById("todayIn").textContent=Math.round(sum.kcal);
+  document.getElementById("dayP").textContent=Math.round(sum.p);
+  document.getElementById("dayC").textContent=Math.round(sum.c);
+  document.getElementById("dayF").textContent=Math.round(sum.f);
+  document.getElementById("dayFi").textContent=Math.round(sum.fi);
+
+  // Protein progress
+  const pWrap=document.getElementById("proteinProgressWrap");
+  const pTargetLabel=document.getElementById("dayPTarget");
+  if(p.protein){
+    pWrap.style.display="block";
+    pTargetLabel.textContent=`/ ${p.protein} 目標`;
+    document.getElementById("proteinProgressBar").style.width=progressPct(sum.p,p.protein)+"%";
+  }else{
+    pWrap.style.display="none";
+    pTargetLabel.textContent="";
+  }
+
+  // Water progress
+  const waterMl=state.waterByDate[todayISO()]||0;
+  const waterGoal=p.waterGoal||2000;
+  document.getElementById("water").textContent=waterMl;
+  document.getElementById("waterGoalLabel").textContent=`目標 ${waterGoal} ml（${progressPct(waterMl,waterGoal)}%）`;
+  document.getElementById("waterProgressBar").style.width=progressPct(waterMl,waterGoal)+"%";
+
+  // Kcal vs target progress
+  const kWrap=document.getElementById("kcalProgressWrap");
+  if(p.target){
+    kWrap.style.display="block";
+    const pct=progressPct(sum.kcal,p.target);
+    document.getElementById("kcalProgressBar").style.width=pct+"%";
+    document.getElementById("kcalProgressLabel").textContent=`${Math.round(sum.kcal)} / ${Math.round(p.target)} kcal`;
+  }else{
+    kWrap.style.display="none";
+  }
+
+  document.getElementById("todayOut").textContent=p.tdee?Math.round(p.tdee):"--";
+  const stat=document.getElementById("todayStatus");
+  if(p.tdee){
+    const diff=Math.round(sum.kcal-p.tdee);
+    document.getElementById("todayDiff").textContent=(diff>0?"+":"")+diff;
+    stat.className="status "+(diff<=-250&&diff>=-700?"status-good":diff<-700?"status-warn":"status-bad");
+    stat.textContent=diff<=-250&&diff>=-700?"適當赤字":diff<-700?"赤字偏大":diff<=0?"接近維持":"熱量超出";
+  }else{
+    document.getElementById("todayDiff").textContent="--";
+    stat.className="status status-warn";stat.textContent="先設定基本資料";
+  }
+
+  const ml=document.getElementById("mealList");
+  const mealOrder=["早餐","午餐","晚餐","點心"];
+  const mealEmoji={"早餐":"🌅","午餐":"☀️","晚餐":"🌙","點心":"🍪"};
+  // Build absolute indices for delete (match by object identity via global index)
+  ml.innerHTML=mealOrder.map(type=>{
+    const items=meals.filter(m=>(m.mealType||"點心")===type);
+    if(!items.length){
+      return `<div class="week-item"><div class="row between"><b>${mealEmoji[type]} ${type}</b><span class="small">尚未記錄</span></div></div>`;
+    }
+    const subtotal=items.reduce((s,m)=>s+m.kcal,0);
+    return `<div class="week-item">
+      <div class="row between"><b>${mealEmoji[type]} ${type}</b><span>${Math.round(subtotal)} kcal</span></div>
+      ${items.map(m=>{
+        const globalIdx=state.meals.indexOf(m);
+        const delArg=m.id?JSON.stringify(m.id):String(globalIdx);
+        return `<div style="margin-top:6px">
+          <div class="row between">
+            <span>${esc(m.name)}</span>
+            <div class="meal-row-actions">
+              <span class="small">${esc(m.time||"")}</span>
+              <button type="button" class="danger-btn" onclick='deleteMeal(${delArg})'>刪除</button>
+            </div>
+          </div>
+          <div class="small">蛋白質 ${m.p}g・碳水 ${m.c}g・脂肪 ${m.f}g・纖維 ${m.fi}g ・ ${m.kcal} kcal</div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }).join("");
+
+  const wk=weeklyData();
+  document.getElementById("weekPreview").innerHTML=wk.daysWithData>=3?
+    `近7日平均攝取 <b>${Math.round(wk.avgIntake)} kcal</b> / 日<br>7日平均體重 ${wk.avgWeight?wk.avgWeight.toFixed(1)+" kg":"資料不足"}<br><span class="status ${wk.statusClass}">${wk.statusText}</span>`:
+    `目前已有 ${wk.daysWithData} 天餐點資料，累積幾天後會開始產生較有意義的趨勢。`;
+}
+function renderWeights(){
+  const el=document.getElementById("weightHistory");
+  el.innerHTML=state.weights.length?state.weights.slice(-14).reverse().map(x=>`<div class="row between week-item"><span>${x.date}</span><b>${x.value.toFixed(1)} kg</b></div>`).join(""):"尚無紀錄";
+}
+function rangeDates(startAgo,endAgo){
+  const arr=[]; for(let i=startAgo;i>=endAgo;i--)arr.push(dstr(daysAgo(i))); return arr;
+}
+function weeklyData(){
+  const currDates=rangeDates(6,0), prevDates=rangeDates(13,7);
+  const currMeals=state.meals.filter(m=>currDates.includes(m.date));
+  const currWeights=state.weights.filter(w=>currDates.includes(w.date));
+  const prevWeights=state.weights.filter(w=>prevDates.includes(w.date));
+  const byDay={};
+  currDates.forEach(d=>byDay[d]={kcal:0,p:0,c:0,f:0,fi:0,has:false});
+  currMeals.forEach(m=>{let x=byDay[m.date];x.kcal+=m.kcal;x.p+=m.p;x.c+=m.c;x.f+=m.f;x.fi+=m.fi;x.has=true});
+  const active=Object.values(byDay).filter(x=>x.has);
+  const daysWithData=active.length;
+  const avg=(key)=>daysWithData?active.reduce((s,x)=>s+x[key],0)/daysWithData:0;
+  const avgWeight=currWeights.length?currWeights.reduce((s,x)=>s+x.value,0)/currWeights.length:null;
+  const prevAvgWeight=prevWeights.length?prevWeights.reduce((s,x)=>s+x.value,0)/prevWeights.length:null;
+  const weightChange=(avgWeight!=null&&prevAvgWeight!=null)?avgWeight-prevAvgWeight:null;
+  const avgIntake=avg("kcal");
+  const avgDeficit=state.profile.tdee&&daysWithData?avgIntake-state.profile.tdee:null;
+
+  let statusText="資料累積中",statusClass="status-warn";
+  if(weightChange!=null){
+    if(weightChange<=-0.3&&weightChange>=-1.0){statusText="減重速度適中";statusClass="status-good"}
+    else if(weightChange<-1.0){statusText="下降偏快";statusClass="status-warn"}
+    else if(weightChange>-0.2){statusText="下降偏慢";statusClass="status-bad"}
+  }else if(avgDeficit!=null){
+    if(avgDeficit<=-250&&avgDeficit>=-700){statusText="熱量赤字合理";statusClass="status-good"}
+    else if(avgDeficit<-700){statusText="熱量赤字偏大";statusClass="status-warn"}
+    else {statusText="熱量赤字偏小";statusClass="status-bad"}
+  }
+  return {daysWithData,avgWeight,prevAvgWeight,weightChange,avgIntake,avgDeficit,p:avg("p"),c:avg("c"),f:avg("f"),fi:avg("fi"),statusText,statusClass};
+}
+function renderWeek(){
+  const w=weeklyData(),p=state.profile;
+  document.getElementById("avgWeight").textContent=w.avgWeight?w.avgWeight.toFixed(1):"--";
+  document.getElementById("weightChange").textContent=w.weightChange!=null?(w.weightChange>0?"+":"")+w.weightChange.toFixed(1):"--";
+  document.getElementById("avgIntake").textContent=w.daysWithData?Math.round(w.avgIntake):"--";
+  document.getElementById("avgDeficit").textContent=w.avgDeficit!=null?(w.avgDeficit>0?"+":"")+Math.round(w.avgDeficit):"--";
+  document.getElementById("wkP").textContent=w.daysWithData?Math.round(w.p):"--";
+  document.getElementById("wkC").textContent=w.daysWithData?Math.round(w.c):"--";
+  document.getElementById("wkF").textContent=w.daysWithData?Math.round(w.f):"--";
+  document.getElementById("wkFi").textContent=w.daysWithData?Math.round(w.fi):"--";
+  const s=document.getElementById("weekStatus");s.textContent=w.statusText;s.className="status "+w.statusClass;
+
+  let adv=[];
+  if(w.daysWithData<3){adv.push("目前餐點資料還太少，先持續記錄幾天，週報會越來越有參考價值。")}
+  else{
+    if(w.weightChange!=null){
+      if(w.weightChange>-0.2) adv.push("本週體重下降偏慢。下週先嘗試把平均每日攝取再降低約 100～150 kcal，不必一次砍太多。");
+      else if(w.weightChange<-1.0) adv.push("本週體重下降偏快。下週可增加約 150～200 kcal，優先補蛋白質與原型澱粉，避免赤字過大。");
+      else adv.push("本週減重速度落在合理區間，暫時不需要再降低熱量，維持目前節奏即可。");
+    }else if(w.avgDeficit!=null){
+      if(w.avgDeficit>-250) adv.push("目前平均熱量赤字偏小。可先從醬料、油炸、麻醬、肉燥等高熱量配料減量，目標每日少約 100～150 kcal。");
+      else if(w.avgDeficit<-700) adv.push("目前平均熱量赤字偏大。建議每日補回約 150～200 kcal，避免過度節食。");
+      else adv.push("目前熱量赤字合理，先維持並觀察 7 日平均體重變化。");
+    }
+    if(p.protein && w.p < p.protein*.85) adv.push(`蛋白質偏低。你的每日目標約 ${p.protein} g，下週每餐優先增加雞蛋、豆腐、魚、雞肉或無糖豆漿。`);
+    if(w.fi && w.fi<20) adv.push("纖維偏低。建議每天至少多補 1～2 份蔬菜，麵食餐也盡量加燙青菜或菇類。");
+    const noodles=state.meals.filter(m=>rangeDates(6,0).includes(m.date) && /麵/.test(m.name)).length;
+    if(noodles>=4) adv.push("這週麵食比例偏高。可以保留麵食，但其中幾餐改成少醬、加蛋白質、加青菜，通常比直接戒掉更容易維持。");
+  }
+  document.getElementById("adviceBox").innerHTML=adv.map((x,i)=>`<div${i?' style="margin-top:8px"':''}>• ${x}</div>`).join("");
+}
+
+
+function setDefaultMealType(){
+  const h=new Date().getHours();
+  let type="點心";
+  if(h>=5 && h<10) type="早餐";
+  else if(h>=10 && h<15) type="午餐";
+  else if(h>=17 && h<21) type="晚餐";
+  else type="點心";
+  const sel=document.getElementById("mealType");
+  if(sel) sel.value=type;
+}
+
+
+function setBackupStatus(msg){
+  const el=document.getElementById("backupStatus");
+  if(el) el.textContent=msg||"";
+}
+function exportBackup(){
+  try{
+    const payload={
+      app:"slim-plate",
+      version:"V2.4",
+      exportedAt:new Date().toISOString(),
+      state:state
+    };
+    const text=JSON.stringify(payload,null,2);
+    const blob=new Blob([text],{type:"application/json"});
+    const a=document.createElement("a");
+    const stamp=todayISO().replace(/-/g,"");
+    a.href=URL.createObjectURL(blob);
+    a.download="slim-plate-backup-"+stamp+".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    // also copy when possible
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(()=>setBackupStatus("已下載備份檔，並已複製到剪貼簿。請存到檔案／雲端硬碟。")).catch(()=>setBackupStatus("已下載備份檔。請存到安全的地方。"));
+    }else{
+      setBackupStatus("已下載備份檔。請存到安全的地方。");
+    }
+  }catch(err){
+    setBackupStatus("匯出失敗："+(err&&err.message||err));
+  }
+}
+function applyBackupObject(obj){
+  if(!obj||typeof obj!=="object") throw new Error("備份格式不正確");
+  const incoming=obj.state||obj;
+  if(!incoming||typeof incoming!=="object") throw new Error("找不到 state 資料");
+  if(!confirm("匯入會覆蓋目前此網址上的紀錄，確定嗎？")) return false;
+  const base={
+    waterByDate:{},
+    meals:[],
+    weights:[],
+    profile:{sex:"male",age:40,height:170,weight:75,goal:68,activity:1.55,bmr:null,tdee:null,target:null,protein:null,waterGoal:2000}
+  };
+  state={
+    ...base,
+    ...incoming,
+    profile:{...base.profile,...(incoming.profile||{})},
+    meals:Array.isArray(incoming.meals)?incoming.meals:[],
+    weights:Array.isArray(incoming.weights)?incoming.weights:[],
+    waterByDate:(incoming.waterByDate&&typeof incoming.waterByDate==="object")?incoming.waterByDate:{}
+  };
+  if(!state.profile.waterGoal) state.profile.waterGoal=2000;
+  safeSave();
+  renderProfile();
+  refreshHome();
+  setBackupStatus("匯入成功。可到首頁／週報查看。");
+  return true;
+}
+function importBackupText(){
+  try{
+    const raw=(document.getElementById("importText").value||"").trim();
+    if(!raw){setBackupStatus("請先貼上備份文字");return;}
+    const obj=JSON.parse(raw);
+    applyBackupObject(obj);
+  }catch(err){
+    setBackupStatus("匯入失敗："+(err&&err.message||err));
+  }
+}
+function importBackupFile(e){
+  const f=e.target.files&&e.target.files[0];
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const obj=JSON.parse(String(r.result||""));
+      applyBackupObject(obj);
+    }catch(err){
+      setBackupStatus("匯入失敗："+(err&&err.message||err));
+    }
+    e.target.value="";
+  };
+  r.onerror=()=>setBackupStatus("讀取檔案失敗");
+  r.readAsText(f);
+}
+
+function boot(){
+  try{
+    document.getElementById("dateText").textContent=new Date().toLocaleDateString("zh-TW",{year:"numeric",month:"long",day:"numeric",weekday:"long"});
+    if(!state.profile.bmr) saveProfile();
+    setDefaultMealType();renderProfile();refreshHome();
+  }catch(err){showBootError(err)}
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot);
+else boot();
+
+</script>
+</body>
+</html>
