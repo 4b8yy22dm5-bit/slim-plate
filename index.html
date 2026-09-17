@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 
 <meta name="theme-color" content="#f5f8f5">
-<title>我的瘦身小餐盤 V2.4.2.1 · 手機版</title>
+<title>我的瘦身小餐盤 V2.4.3 · 手機版</title>
 <style>
 :root{
   --bg:#f4f7f4;--card:#fff;--text:#202a22;--muted:#748078;--line:#e4ebe5;
@@ -61,7 +61,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <div class="app">
   <div class="row between">
     <div><h1>我的瘦身小餐盤</h1><div class="small" id="dateText"></div></div>
-    <span class="pill">V2.4.2 · 手機版</span>
+    <span class="pill">V2.4.3 · 手機版</span>
   </div>
   <div class="note" style="margin:4px 0 0">手機請用「檔案／檔案管理」→ 用 Safari 或 Chrome 開啟；聊天預覽常無法執行。</div>
 
@@ -377,6 +377,33 @@ const staples=[
   {keys:["白飯","飯"],kcal:260,p:5,c:57,f:.5,fi:1,label:"白飯 1碗"},
   {keys:["雞胸"],kcal:165,p:31,c:0,f:4,fi:0,label:"雞胸 100g"},
   {keys:["雞腿"],kcal:220,p:24,c:0,f:13,fi:0,label:"雞腿 1份"},
+
+  // 麻辣／火鍋配菜（避免「鴨血豆腐」被誤判成單純「豆腐」）
+  {keys:["麻辣鴨血豆腐","鴨血豆腐"],kcal:320,p:22,c:8,f:22,fi:2,label:"麻辣鴨血豆腐 1份（約小份盤）"},
+  {keys:["麻辣鴨血","鴨血"],kcal:180,p:18,c:2,f:12,fi:0,label:"麻辣鴨血 1份"},
+  {keys:["麻辣臭豆腐","臭豆腐"],kcal:380,p:16,c:22,f:26,fi:3,label:"臭豆腐／麻辣臭豆腐 1份"},
+  {keys:["麻辣燙"],kcal:550,p:28,c:45,f:28,fi:6,label:"麻辣燙 1份（含湯料）"},
+  {keys:["麻辣鍋","麻辣火鍋"],kcal:750,p:35,c:40,f:48,fi:5,label:"麻辣鍋 1人份（估）"},
+  {keys:["滷味"],kcal:420,p:24,c:20,f:28,fi:3,label:"滷味拼盤 1份"},
+  {keys:["滷肉飯","肉燥飯"],kcal:520,p:18,c:68,f:18,fi:2,label:"滷肉飯 1碗"},
+  {keys:["雞排"],kcal:480,p:32,c:28,f:28,fi:1,label:"炸雞排 1份"},
+  {keys:["鹽酥雞"],kcal:450,p:28,c:22,f:30,fi:1,label:"鹽酥雞 1份"},
+  {keys:["蚵仔煎"],kcal:420,p:18,c:32,f:24,fi:2,label:"蚵仔煎 1份"},
+  {keys:["肉圓"],kcal:350,p:12,c:48,f:12,fi:2,label:"肉圓 1顆"},
+  {keys:["臭豆腐鍋"],kcal:600,p:24,c:30,f:40,fi:4,label:"臭豆腐鍋 1人份（估）"},
+  {keys:["麻婆豆腐"],kcal:280,p:16,c:12,f:18,fi:2,label:"麻婆豆腐 1份"},
+  {keys:["皮蛋豆腐"],kcal:180,p:12,c:6,f:12,fi:1,label:"皮蛋豆腐 1份"},
+  {keys:["豆腐腦","豆花"],kcal:140,p:8,c:22,f:3,fi:1,label:"豆花／豆腐腦 1碗"},
+  {keys:["油豆腐"],kcal:160,p:10,c:6,f:11,fi:1,label:"油豆腐 1份"},
+  {keys:["小籠包"],kcal:400,p:18,c:42,f:18,fi:2,label:"小籠包 約4-5顆"},
+  {keys:["煎餃","鍋貼"],kcal:380,p:14,c:42,f:16,fi:2,label:"煎餃／鍋貼 約6顆"},
+  {keys:["水餃"],kcal:350,p:16,c:40,f:12,fi:2,label:"水餃 約8顆"},
+  {keys:["炒飯"],kcal:550,p:16,c:70,f:20,fi:3,label:"炒飯 1盤"},
+  {keys:["炒麵"],kcal:520,p:16,c:68,f:18,fi:4,label:"炒麵 1盤"},
+  {keys:["義大利麵","義大利面"],kcal:580,p:20,c:72,f:22,fi:4,label:"義大利麵 1份"},
+  {keys:["壽司"],kcal:350,p:12,c:58,f:6,fi:2,label:"壽司 約6貫"},
+  {keys:["滷雞腿"],kcal:280,p:28,c:4,f:16,fi:0,label:"滷雞腿 1支"},
+  {keys:["貢丸湯","蛋花湯","味噌湯"],kcal:90,p:6,c:4,f:5,fi:0,label:"湯品 1碗"},
   {keys:["豆腐"],kcal:85,p:8,c:2,f:5,fi:1,label:"豆腐 100g"},
 
   // 整份餐點
@@ -422,16 +449,22 @@ function preview(e){
 }
 function stapleFor(name){
   const clean=(name||"").trim();
-  // Flatten keys with their staple, sort longest key first to reduce false matches (e.g. 白飯 before 飯)
   const pairs=[];
   for(const s of staples){
     for(const k of s.keys) pairs.push({k,s});
   }
   pairs.sort((a,b)=>b.k.length-a.k.length);
   for(const {k,s} of pairs){
-    if(clean.includes(k) || k.includes(clean)) return s;
+    // Prefer dish names containing the key (longest first).
+    // Short generic keys like 豆腐/飯 must not steal long dishes.
+    if(clean.includes(k)){
+      if(k.length<=2 && clean.length>=k.length+3) continue;
+      return s;
+    }
+    // Reverse match only for near-aliases (e.g. 鴨血豆腐 ≈ 麻辣鴨血豆腐), never bare 豆腐.
+    if(clean.length>=3 && k.includes(clean) && (k.length-clean.length)<=2) return s;
   }
-  return {kcal:350,p:15,c:45,f:12,fi:3,label:"未辨識食物，採一般單品 1 份估算"};
+  return {kcal:350,p:15,c:45,f:12,fi:3,label:"未辨識食物，採一般單品 1 份估算（可手動調整熱量）"};
 }
 function renderEstimateUI(){
   if(!currentEstimate)return;
