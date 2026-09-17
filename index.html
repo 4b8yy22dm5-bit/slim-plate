@@ -348,7 +348,14 @@ function normalizeFoodName(s){
     .toLowerCase()
     .replace(/[()（）\[\]【】{}\s\-_/／.,，。、+＋~～*＊'"`]/g,"")
     .replace(/臺/g,"台")
-    .replace(/麵/g,"面");
+    .replace(/麵/g,"面")
+    .replace(/鸡/g,"雞").replace(/鸭/g,"鴨").replace(/鹅/g,"鵝")
+    .replace(/鱼/g,"魚").replace(/虾/g,"蝦").replace(/饭/g,"飯")
+    .replace(/当/g,"當").replace(/卤/g,"滷").replace(/汤/g,"湯")
+    .replace(/饺/g,"餃").replace(/饼/g,"餅").replace(/葱/g,"蔥")
+    .replace(/义/g,"義").replace(/寿/g,"壽").replace(/团/g,"團")
+    .replace(/东/g,"東").replace(/关/g,"關").replace(/酱/g,"醬")
+    .replace(/两/g,"兩").replace(/个/g,"個");
 }
 
 const GENERIC_KEYS=new Set([
@@ -813,6 +820,15 @@ function leftoverOf(clean,k){
   return clean.split(k).join("");
 }
 
+const CONTAINER_WORDS=["便當","餐盒","火鍋","麻辣燙","自助餐"].map(normalizeFoodName);
+
+function containerMismatch(clean,s){
+  for(const c of CONTAINER_WORDS){
+    if(clean.includes(c) && !s.keys.some(k=>normalizeFoodName(k).includes(c))) return true;
+  }
+  return false;
+}
+
 function matchStaple(clean){
   const pairs=[];
   for(const s of staples){
@@ -824,6 +840,7 @@ function matchStaple(clean){
   pairs.sort((a,b)=>b.k.length-a.k.length);
   for(const {k,s} of pairs){
     if(s.unless && s.unless.test(clean)) continue;
+    if(containerMismatch(clean,s)) continue;
     if(clean.includes(k)){
       // Short generic keys like 豆腐/飯 must not steal long compound dishes.
       if(isGenericKey(k,s)){
