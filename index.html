@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 
 <meta name="theme-color" content="#f5f8f5">
-<title>我的瘦身小餐盤 V2.4.3 · 手機版</title>
+<title>我的瘦身小餐盤 V2.5 · 手機版</title>
 <style>
 :root{
   --bg:#f4f7f4;--card:#fff;--text:#202a22;--muted:#748078;--line:#e4ebe5;
@@ -61,7 +61,7 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
 <div class="app">
   <div class="row between">
     <div><h1>我的瘦身小餐盤</h1><div class="small" id="dateText"></div></div>
-    <span class="pill">V2.4.3 · 手機版</span>
+    <span class="pill">V2.5 · 手機版</span>
   </div>
   <div class="note" style="margin:4px 0 0">手機請用「檔案／檔案管理」→ 用 Safari 或 Chrome 開啟；聊天預覽常無法執行。</div>
 
@@ -159,8 +159,8 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
         </select>
       </div>
       <div class="section" style="margin-top:14px">2. 輸入主食 / 主菜</div>
-      <input id="mainFood" placeholder="例如：麻醬麵、肉燥乾麵、白飯、雞腿便當">
-      <div class="note" style="margin-top:7px">你只要輸入最主要的食物名稱，不用自己查熱量。常見食物會用各自獨立的營養資料估算。</div>
+      <input id="mainFood" placeholder="例如：麻辣鴨血豆腐、蚵仔麵線、雞腿便當、珍珠奶茶">
+      <div class="note" style="margin-top:7px">先比對最長菜名（避免「麻辣鴨血豆腐」被當成「豆腐」）。早餐、麵食、便當、滷味／麻辣、夜市與飲料已擴大資料庫；沒有建檔的名稱會依 麻辣／滷味／炸／炒／麵／飯／湯／便當 等線索粗估，可再手動調整熱量。</div>
       <label class="check-row">
         <input type="checkbox" id="addSidesCheck">
         <span>加上常見配菜估算（約 +300 kcal）</span>
@@ -342,76 +342,413 @@ try{
 let currentEstimate=null;
 let estimateBase=null; // original estimate before kcal tweaks
 
-const staples=[
-  // 早餐常見
-  {keys:["原味蛋餅","蛋餅"],kcal:320,p:11,c:36,f:14,fi:2,label:"原味蛋餅 1份"},
-  {keys:["起司蛋餅"],kcal:400,p:17,c:37,f:20,fi:2,label:"起司蛋餅 1份"},
-  {keys:["培根蛋餅"],kcal:410,p:18,c:37,f:21,fi:2,label:"培根蛋餅 1份"},
-  {keys:["蘿蔔糕"],kcal:250,p:5,c:42,f:7,fi:2,label:"蘿蔔糕 1份"},
-  {keys:["飯糰"],kcal:430,p:11,c:68,f:13,fi:3,label:"早餐飯糰 1顆"},
-  {keys:["鐵板麵"],kcal:500,p:14,c:72,f:17,fi:4,label:"鐵板麵 1份"},
-  {keys:["吐司"],kcal:180,p:6,c:32,f:3,fi:2,label:"白吐司 2片"},
-  // 咖啡／飲料（避免未命中時被估成 350kcal）
-  {keys:["無糖美式","美式咖啡","冰美式","熱美式","美式"],kcal:8,p:0.3,c:1.5,f:0,fi:0,label:"美式咖啡 1杯（約12oz／無糖）"},
-  {keys:["黑咖啡","手沖咖啡","義式浓缩","義式濃縮","espresso","Espresso"],kcal:5,p:0.3,c:1,f:0,fi:0,label:"黑咖啡／濃縮 1杯"},
-  {keys:["無糖拿鐵","拿鐵"],kcal:150,p:8,c:12,f:8,fi:0,label:"拿鐵 1杯（鮮奶，約中杯）"},
-  {keys:["卡布奇諾","卡布"],kcal:120,p:6,c:10,f:6,fi:0,label:"卡布奇諾 1杯（約中杯）"},
-  {keys:["摩卡"],kcal:250,p:8,c:30,f:10,fi:1,label:"摩卡 1杯（約中杯）"},
-  {keys:["無糖茶","綠茶","烏龍茶","紅茶","麥茶"],kcal:2,p:0,c:0.5,f:0,fi:0,label:"無糖茶 1杯"},
-  {keys:["無糖豆漿"],kcal:100,p:9,c:6,f:5,fi:1,label:"無糖豆漿 300ml"},
-  {keys:["有糖豆漿"],kcal:160,p:8,c:24,f:5,fi:1,label:"有糖豆漿 300ml"},
-  {keys:["鮮奶","牛奶"],kcal:190,p:10,c:15,f:10,fi:0,label:"全脂鮮奶 300ml"},
-  {keys:["茶葉蛋","滷蛋","雞蛋"],kcal:75,p:6.5,c:1,f:5,fi:0,label:"蛋 1顆"},
+function normalizeFoodName(s){
+  return String(s||"")
+    .trim()
+    .toLowerCase()
+    .replace(/[()（）\[\]【】{}\s\-_/／.,，。、+＋~～*＊'"`]/g,"")
+    .replace(/臺/g,"台")
+    .replace(/麵/g,"面");
+}
 
-  // 麵食
-  {keys:["麻醬麵"],kcal:520,p:16,c:72,f:19,fi:4,label:"麻醬麵 1碗"},
-  {keys:["炸醬麵"],kcal:560,p:22,c:78,f:18,fi:5,label:"炸醬麵 1碗"},
+const GENERIC_KEYS=new Set([
+  "豆腐","飯","面","蛋","湯","肉","雞","魚","菜","奶","茶","水","餅","包","餃","粥","粉","粿","圓","糕","冰","豆","血","干","乾","丸","腸","排"
+].map(normalizeFoodName));
+
+const WEAK_TOKENS=[
+  "原味","無糖","有糖","微糖","少糖","半糖","全糖","去冰","少冰","微冰","正常冰","常溫",
+  "大杯","中杯","小杯","人份","套餐","綜合","一份","二份","兩份","低脂","脫脂","全脂",
+  "白","黑","冰","熱","溫","大","中","小","份","碗","盤","杯","顆","個","片","條","串","只","支","餐","套",
+  "一","二","兩","三","四","五","六","七","八","九","十","半"
+].map(normalizeFoodName).sort((a,b)=>b.length-a.length);
+
+function isWeakLeftover(s){
+  s=normalizeFoodName(s).replace(/\d+/g,"");
+  if(!s) return true;
+  let prev="";
+  while(s && s!==prev){
+    prev=s;
+    for(const t of WEAK_TOKENS){
+      if(s.startsWith(t)){s=s.slice(t.length);break;}
+      if(s.endsWith(t)){s=s.slice(0,-t.length);break;}
+    }
+  }
+  return !s;
+}
+
+function isGenericKey(k, entry){
+  if(entry && entry.generic===true) return true;
+  if(entry && entry.generic===false) return false;
+  return k.length<=1 || GENERIC_KEYS.has(k);
+}
+
+const staples=[
+  // —— 早餐 ——
+  {keys:["原味蛋餅","蛋餅"],kcal:320,p:11,c:36,f:14,fi:2,label:"原味蛋餅 1份"},
+  {keys:["起司蛋餅","芝士蛋餅"],kcal:400,p:17,c:37,f:20,fi:2,label:"起司蛋餅 1份"},
+  {keys:["培根蛋餅"],kcal:410,p:18,c:37,f:21,fi:2,label:"培根蛋餅 1份"},
+  {keys:["玉米蛋餅"],kcal:380,p:14,c:40,f:16,fi:3,label:"玉米蛋餅 1份"},
+  {keys:["火腿蛋餅"],kcal:400,p:18,c:37,f:20,fi:2,label:"火腿蛋餅 1份"},
+  {keys:["薯餅蛋餅"],kcal:450,p:15,c:48,f:22,fi:3,label:"薯餅蛋餅 1份"},
+  {keys:["蔬菜蛋餅"],kcal:340,p:12,c:36,f:14,fi:4,label:"蔬菜蛋餅 1份"},
+  {keys:["鮪魚蛋餅","tuna蛋餅"],kcal:390,p:18,c:36,f:18,fi:2,label:"鮪魚蛋餅 1份"},
+  {keys:["豬肉蛋餅"],kcal:420,p:18,c:37,f:22,fi:2,label:"豬肉蛋餅 1份"},
+  {keys:["蔥抓餅加蛋","抓餅加蛋"],kcal:450,p:16,c:48,f:22,fi:3,label:"蔥抓餅加蛋 1份"},
+  {keys:["蔥抓餅"],kcal:380,p:8,c:48,f:18,fi:3,label:"蔥抓餅 1份"},
+  {keys:["手抓餅"],kcal:400,p:9,c:50,f:18,fi:3,label:"手抓餅 1份"},
+  {keys:["蔥油餅"],kcal:350,p:7,c:42,f:17,fi:2,label:"蔥油餅 1份"},
+  {keys:["蘿蔔糕加蛋"],kcal:330,p:11,c:42,f:12,fi:2,label:"蘿蔔糕加蛋 1份"},
+  {keys:["蘿蔔糕"],kcal:250,p:5,c:42,f:7,fi:2,label:"蘿蔔糕 1份"},
+  {keys:["肉鬆飯糰"],kcal:450,p:12,c:70,f:14,fi:3,label:"肉鬆飯糰 1顆"},
+  {keys:["菜飯糰","蔬菜飯糰"],kcal:400,p:10,c:68,f:10,fi:4,label:"菜飯糰 1顆"},
+  {keys:["鮪魚飯糰"],kcal:440,p:14,c:66,f:13,fi:3,label:"鮪魚飯糰 1顆"},
+  {keys:["御飯糰","三角飯糰","超商飯糰"],kcal:180,p:5,c:32,f:4,fi:1,label:"御飯糰／三角飯糰 1顆"},
+  {keys:["飯糰","飯團"],kcal:430,p:11,c:68,f:13,fi:3,label:"早餐飯糰 1顆"},
+  {keys:["黑胡椒鐵板麵"],kcal:530,p:15,c:72,f:19,fi:4,label:"黑胡椒鐵板麵 1份"},
+  {keys:["蘑菇鐵板麵"],kcal:520,p:14,c:70,f:18,fi:4,label:"蘑菇鐵板麵 1份"},
+  {keys:["肉醬鐵板麵"],kcal:560,p:18,c:72,f:20,fi:4,label:"肉醬鐵板麵 1份"},
+  {keys:["鐵板麵"],kcal:500,p:14,c:72,f:17,fi:4,label:"鐵板麵 1份"},
+  {keys:["奶酥厚片","厚片奶酥"],kcal:360,p:7,c:48,f:15,fi:2,label:"奶酥厚片 1片"},
+  {keys:["厚片吐司"],kcal:320,p:7,c:42,f:13,fi:2,label:"厚片吐司 1片"},
+  {keys:["花生吐司"],kcal:280,p:8,c:34,f:12,fi:3,label:"花生吐司 1份"},
+  {keys:["肉鬆吐司"],kcal:260,p:9,c:34,f:8,fi:2,label:"肉鬆吐司 1份"},
+  {keys:["火腿蛋吐司"],kcal:350,p:16,c:32,f:16,fi:2,label:"火腿蛋吐司 1份"},
+  {keys:["總匯三明治","總匯吐司"],kcal:420,p:20,c:38,f:20,fi:3,label:"總匯三明治 1份"},
+  {keys:["蛋沙拉三明治"],kcal:320,p:14,c:30,f:14,fi:2,label:"蛋沙拉三明治 1份"},
+  {keys:["三明治"],kcal:300,p:12,c:32,f:12,fi:2,label:"三明治 1份"},
+  {keys:["吐司"],kcal:180,p:6,c:32,f:3,fi:2,label:"白吐司 2片"},
+  {keys:["雞腿堡","雞肉漢堡"],kcal:520,p:26,c:48,f:22,fi:3,label:"雞腿堡 1份"},
+  {keys:["豬肉漢堡"],kcal:450,p:20,c:42,f:20,fi:2,label:"豬肉漢堡 1個"},
+  {keys:["牛肉漢堡","起司漢堡"],kcal:480,p:24,c:40,f:22,fi:2,label:"牛肉／起司漢堡 1個"},
+  {keys:["魚排堡"],kcal:430,p:18,c:44,f:18,fi:2,label:"魚排堡 1個"},
+  {keys:["漢堡"],kcal:430,p:18,c:42,f:18,fi:2,label:"漢堡 1個"},
+  {keys:["薯餅"],kcal:180,p:2,c:18,f:11,fi:2,label:"薯餅 1份"},
+  {keys:["燒餅油條"],kcal:450,p:12,c:52,f:20,fi:3,label:"燒餅油條 1份"},
+  {keys:["燒餅"],kcal:250,p:7,c:38,f:8,fi:2,label:"燒餅 1個"},
+  {keys:["油條"],kcal:260,p:5,c:28,f:14,fi:1,label:"油條 1根"},
+  {keys:["鹹豆漿"],kcal:160,p:10,c:10,f:8,fi:1,label:"鹹豆漿 1碗"},
+  {keys:["皮蛋瘦肉粥"],kcal:280,p:16,c:36,f:8,fi:1,label:"皮蛋瘦肉粥 1碗"},
+  {keys:["廣東粥"],kcal:260,p:14,c:38,f:6,fi:1,label:"廣東粥 1碗"},
+  {keys:["魚片粥"],kcal:240,p:16,c:34,f:5,fi:1,label:"魚片粥 1碗"},
+  {keys:["鹹粥"],kcal:250,p:12,c:36,f:6,fi:1,label:"鹹粥 1碗"},
+  {keys:["地瓜稀飯"],kcal:200,p:4,c:42,f:1,fi:3,label:"地瓜稀飯 1碗"},
+  {keys:["芋頭稀飯"],kcal:210,p:4,c:44,f:1,fi:3,label:"芋頭稀飯 1碗"},
+  {keys:["白粥","稀飯","粥"],kcal:160,p:4,c:36,f:1,fi:1,label:"白粥／稀飯 1碗"},
+  {keys:["碗粿"],kcal:280,p:8,c:48,f:6,fi:2,label:"碗粿 1份"},
+  {keys:["筒仔米糕"],kcal:350,p:12,c:52,f:10,fi:2,label:"筒仔米糕 1個"},
+  {keys:["米糕"],kcal:320,p:10,c:50,f:8,fi:2,label:"米糕 1份"},
+  {keys:["油飯"],kcal:380,p:10,c:58,f:12,fi:2,label:"油飯 1份"},
+  {keys:["肉包"],kcal:220,p:8,c:34,f:6,fi:2,label:"肉包 1個"},
+  {keys:["菜包"],kcal:180,p:6,c:32,f:4,fi:3,label:"菜包 1個"},
+  {keys:["生煎包"],kcal:280,p:10,c:36,f:10,fi:2,label:"生煎包 約2顆"},
+  {keys:["水煎包"],kcal:250,p:8,c:36,f:8,fi:2,label:"水煎包 約2顆"},
+  {keys:["荷包蛋","太陽蛋"],kcal:90,p:7,c:1,f:7,fi:0,label:"荷包蛋 1顆"},
+  {keys:["炒蛋","滑蛋"],kcal:140,p:10,c:2,f:10,fi:0,label:"炒蛋 1份"},
+  {keys:["歐姆蛋"],kcal:180,p:12,c:2,f:14,fi:0,label:"歐姆蛋 1份"},
+  {keys:["可頌","牛角麵包"],kcal:280,p:6,c:32,f:14,fi:2,label:"可頌 1個"},
+  {keys:["巧克力麵包"],kcal:320,p:7,c:42,f:13,fi:2,label:"巧克力麵包 1個"},
+  {keys:["麵包"],kcal:220,p:6,c:38,f:5,fi:2,label:"麵包 1個"},
+
+  // —— 飲料／咖啡／手搖 ——
+  {keys:["無糖美式","冰美式","熱美式","美式咖啡","美式"],kcal:8,p:0.3,c:1.5,f:0,fi:0,unless:/糖奶|奶精|煉乳/,label:"美式咖啡 1杯（約12oz／無糖）"},
+  {keys:["黑咖啡","手沖咖啡","義式浓缩","義式濃縮","espresso"],kcal:5,p:0.3,c:1,f:0,fi:0,unless:/糖|奶|摩卡/,label:"黑咖啡／濃縮 1杯"},
+  {keys:["無糖拿鐵"],kcal:120,p:8,c:9,f:6,fi:0,label:"無糖拿鐵 1杯（鮮奶）"},
+  {keys:["燕麥拿鐵","燕麥奶咖啡"],kcal:180,p:4,c:24,f:7,fi:2,label:"燕麥拿鐵 1杯"},
+  {keys:["豆漿拿鐵"],kcal:160,p:8,c:14,f:7,fi:1,label:"豆漿拿鐵 1杯"},
+  {keys:["拿鐵"],kcal:150,p:8,c:12,f:8,fi:0,unless:/紅茶拿鐵|茶拿鐵/,label:"拿鐵 1杯（鮮奶，約中杯）"},
+  {keys:["卡布奇諾","卡布"],kcal:120,p:6,c:10,f:6,fi:0,label:"卡布奇諾 1杯（約中杯）"},
+  {keys:["焦糖瑪奇朵","瑪奇朵"],kcal:250,p:8,c:32,f:9,fi:0,label:"焦糖瑪奇朵 1杯"},
+  {keys:["摩卡"],kcal:250,p:8,c:30,f:10,fi:1,label:"摩卡 1杯（約中杯）"},
+  {keys:["無糖綠茶","無糖烏龍","無糖紅茶","無糖青茶","無糖茶"],kcal:2,p:0,c:0.5,f:0,fi:0,label:"無糖茶 1杯"},
+  {keys:["四季春","金萱","青茶","麥茶"],kcal:2,p:0,c:0.5,f:0,fi:0,unless:/糖|奶|珍珠|波霸|蜂蜜|檸檬|果汁|多多/,label:"無糖青茶／麥茶 1杯"},
+  {keys:["綠茶","烏龍茶","紅茶"],kcal:2,p:0,c:0.5,f:0,fi:0,unless:/糖|奶|珍珠|波霸|蜂蜜|檸檬|果汁|多多|拿鐵|奶蓋/,label:"無糖茶 1杯"},
+  {keys:["珍珠奶茶","波霸奶茶","珍奶","珍珠奶綠"],kcal:450,p:4,c:72,f:14,fi:1,label:"珍珠奶茶 1杯（約中杯）"},
+  {keys:["波霸鮮奶","珍珠鮮奶"],kcal:380,p:8,c:58,f:12,fi:1,label:"波霸／珍珠鮮奶 1杯"},
+  {keys:["黑糖鮮奶"],kcal:280,p:8,c:36,f:10,fi:0,label:"黑糖鮮奶 1杯"},
+  {keys:["鮮奶茶"],kcal:220,p:8,c:24,f:8,fi:0,label:"鮮奶茶 1杯"},
+  {keys:["紅茶拿鐵","綠茶拿鐵","烏龍拿鐵","茶拿鐵"],kcal:250,p:8,c:28,f:10,fi:0,label:"茶拿鐵 1杯"},
+  {keys:["奶蓋紅茶","奶蓋綠茶","奶蓋烏龍"],kcal:280,p:4,c:32,f:14,fi:0,label:"奶蓋茶 1杯"},
+  {keys:["奶茶","奶綠"],kcal:280,p:3,c:42,f:10,fi:0,label:"奶茶 1杯（約中杯）"},
+  {keys:["蜂蜜檸檬","檸檬蜜"],kcal:180,p:0,c:46,f:0,fi:0,label:"蜂蜜檸檬 1杯"},
+  {keys:["檸檬綠茶","檸檬紅茶","冰檸檬茶"],kcal:140,p:0,c:36,f:0,fi:0,label:"檸檬茶 1杯"},
+  {keys:["百香綠茶","百香果綠"],kcal:160,p:0,c:40,f:0,fi:0,label:"百香綠茶 1杯"},
+  {keys:["柚子茶"],kcal:150,p:0,c:38,f:0,fi:0,label:"柚子茶 1杯"},
+  {keys:["冬瓜茶","冬瓜檸檬"],kcal:130,p:0,c:34,f:0,fi:0,label:"冬瓜茶 1杯"},
+  {keys:["甘蔗青茶","甘蔗汁"],kcal:180,p:0,c:46,f:0,fi:0,label:"甘蔗青茶／甘蔗汁 1杯"},
+  {keys:["青草茶"],kcal:20,p:0,c:5,f:0,fi:0,unless:/糖蜜|加糖/,label:"青草茶 1杯"},
+  {keys:["仙草茶","仙草蜜"],kcal:90,p:0,c:22,f:0,fi:1,label:"仙草茶／仙草蜜 1杯"},
+  {keys:["愛玉檸檬"],kcal:120,p:0,c:30,f:0,fi:1,label:"愛玉檸檬 1杯"},
+  {keys:["多多綠茶"],kcal:180,p:2,c:40,f:1,fi:0,label:"多多綠茶 1杯"},
+  {keys:["可可","熱巧克力","巧克力飲"],kcal:280,p:8,c:36,f:12,fi:2,label:"可可／熱巧克力 1杯"},
+  {keys:["柳橙汁","鮮橙汁"],kcal:160,p:2,c:38,f:0,fi:1,label:"柳橙汁 1杯"},
+  {keys:["西瓜汁"],kcal:140,p:2,c:34,f:0,fi:1,label:"西瓜汁 1杯"},
+  {keys:["芒果汁","芒果冰沙"],kcal:220,p:2,c:52,f:1,fi:2,label:"芒果汁／芒果冰沙 1杯"},
+  {keys:["葡萄汁"],kcal:160,p:1,c:40,f:0,fi:0,label:"葡萄汁 1杯"},
+  {keys:["蘋果汁"],kcal:150,p:0,c:38,f:0,fi:0,label:"蘋果汁 1杯"},
+  {keys:["果汁","冰沙"],kcal:180,p:1,c:44,f:0,fi:1,label:"果汁／冰沙 1杯"},
+  {keys:["可樂","汽水","雪碧","沙士"],kcal:140,p:0,c:36,f:0,fi:0,label:"汽水 1罐／杯（約330ml）"},
+  {keys:["運動飲料","寶礦力","舒跑"],kcal:90,p:0,c:22,f:0,fi:0,label:"運動飲料 1瓶"},
+  {keys:["木瓜牛奶"],kcal:280,p:8,c:38,f:10,fi:2,label:"木瓜牛奶 1杯"},
+  {keys:["香蕉牛奶"],kcal:260,p:8,c:36,f:9,fi:2,label:"香蕉牛奶 1杯"},
+  {keys:["草莓牛奶"],kcal:240,p:8,c:32,f:8,fi:1,label:"草莓牛奶 1杯"},
+  {keys:["無糖豆漿"],kcal:100,p:9,c:6,f:5,fi:1,label:"無糖豆漿 300ml"},
+  {keys:["有糖豆漿","甜豆漿"],kcal:160,p:8,c:24,f:5,fi:1,label:"有糖豆漿 300ml"},
+  {keys:["豆漿"],kcal:130,p:8,c:12,f:5,fi:1,unless:/鹹/,label:"豆漿 300ml"},
+  {keys:["米漿"],kcal:180,p:4,c:32,f:4,fi:1,label:"米漿 1杯"},
+  {keys:["杏仁茶"],kcal:160,p:4,c:24,f:5,fi:1,label:"杏仁茶 1杯"},
+  {keys:["芝麻糊"],kcal:220,p:8,c:28,f:10,fi:3,label:"芝麻糊 1碗"},
+  {keys:["養樂多","優酪乳","優格飲","可爾必思","多多"],kcal:80,p:2,c:16,f:1,fi:0,unless:/綠茶/,label:"乳酸飲 1瓶"},
+  {keys:["氣泡水","礦泉水","白開水"],kcal:0,p:0,c:0,f:0,fi:0,label:"氣泡水／白開水 1杯"},
+  {keys:["鮮奶","牛奶"],kcal:190,p:10,c:15,f:10,fi:0,unless:/茶|咖啡|木瓜|香蕉|草莓|黑糖/,label:"全脂鮮奶 300ml"},
+  {keys:["茶葉蛋","滷蛋"],kcal:75,p:6.5,c:1,f:5,fi:0,label:"茶葉蛋／滷蛋 1顆"},
+  {keys:["水煮蛋","雞蛋"],kcal:75,p:6.5,c:1,f:5,fi:0,label:"蛋 1顆"},
+
+  // —— 麵食 ——
+  {keys:["麻醬乾麵","麻醬麵"],kcal:520,p:16,c:72,f:19,fi:4,label:"麻醬麵 1碗"},
+  {keys:["炸醬乾麵","炸醬麵"],kcal:560,p:22,c:78,f:18,fi:5,label:"炸醬麵 1碗"},
   {keys:["肉燥乾麵","肉燥麵"],kcal:500,p:18,c:74,f:16,fi:4,label:"肉燥乾麵 1碗"},
   {keys:["陽春乾麵","陽春麵"],kcal:390,p:12,c:70,f:7,fi:3,label:"陽春乾麵 1碗"},
+  {keys:["乾麵","乾拌麵"],kcal:450,p:14,c:70,f:12,fi:3,label:"乾麵 1碗"},
+  {keys:["番茄牛肉麵"],kcal:700,p:34,c:84,f:24,fi:6,label:"番茄牛肉麵 1碗"},
+  {keys:["紅燒牛肉麵"],kcal:680,p:32,c:82,f:24,fi:5,label:"紅燒牛肉麵 1碗"},
+  {keys:["清燉牛肉麵"],kcal:620,p:32,c:78,f:18,fi:5,label:"清燉牛肉麵 1碗"},
   {keys:["牛肉麵"],kcal:680,p:32,c:82,f:24,fi:5,label:"牛肉麵 1碗"},
   {keys:["餛飩麵"],kcal:460,p:20,c:68,f:12,fi:3,label:"餛飩麵 1碗"},
-  {keys:["鍋燒意麵"],kcal:610,p:24,c:69,f:26,fi:4,label:"鍋燒意麵 1碗"},
+  {keys:["鍋燒意麵","鍋燒麵"],kcal:610,p:24,c:69,f:26,fi:4,label:"鍋燒意麵 1碗"},
+  {keys:["鱔魚意麵"],kcal:620,p:28,c:70,f:24,fi:4,label:"鱔魚意麵 1碗"},
+  {keys:["擔仔麵","担仔麵"],kcal:380,p:16,c:52,f:12,fi:3,label:"擔仔麵 1碗"},
+  {keys:["擔擔麵","担担麵"],kcal:540,p:18,c:68,f:22,fi:4,label:"擔擔麵 1碗"},
+  {keys:["雞絲涼麵","涼麵"],kcal:420,p:16,c:62,f:12,fi:3,label:"涼麵 1份"},
+  {keys:["蚵仔麵線"],kcal:520,p:22,c:58,f:22,fi:4,label:"蚵仔麵線 1碗"},
+  {keys:["大腸麵線"],kcal:480,p:18,c:52,f:22,fi:3,label:"大腸麵線 1碗"},
+  {keys:["麵線羹"],kcal:420,p:16,c:50,f:16,fi:3,label:"麵線羹 1碗"},
+  {keys:["豬腳麵線","豬腳麵"],kcal:580,p:28,c:52,f:26,fi:3,label:"豬腳麵線 1碗"},
+  {keys:["當歸麵線"],kcal:420,p:18,c:50,f:16,fi:2,label:"當歸麵線 1碗"},
+  {keys:["肉羹麵"],kcal:520,p:22,c:64,f:18,fi:3,label:"肉羹麵 1碗"},
+  {keys:["魷魚羹麵"],kcal:540,p:24,c:64,f:20,fi:3,label:"魷魚羹麵 1碗"},
+  {keys:["赤肉羹麵"],kcal:530,p:24,c:62,f:18,fi:3,label:"赤肉羹麵 1碗"},
+  {keys:["土魠魚羹麵"],kcal:560,p:26,c:62,f:20,fi:3,label:"土魠魚羹麵 1碗"},
+  {keys:["花枝羹麵"],kcal:540,p:24,c:62,f:20,fi:3,label:"花枝羹麵 1碗"},
+  {keys:["魚丸麵"],kcal:430,p:18,c:62,f:12,fi:2,label:"魚丸麵 1碗"},
+  {keys:["貢丸麵"],kcal:430,p:18,c:62,f:12,fi:2,label:"貢丸麵 1碗"},
+  {keys:["什錦炒麵"],kcal:560,p:20,c:68,f:22,fi:4,label:"什錦炒麵 1盤"},
+  {keys:["牛肉炒麵"],kcal:580,p:26,c:66,f:22,fi:4,label:"牛肉炒麵 1盤"},
+  {keys:["蝦仁炒麵"],kcal:540,p:20,c:66,f:20,fi:4,label:"蝦仁炒麵 1盤"},
+  {keys:["炒麵"],kcal:520,p:16,c:68,f:18,fi:4,label:"炒麵 1盤"},
+  {keys:["炒米粉"],kcal:480,p:12,c:70,f:16,fi:3,label:"炒米粉 1盤"},
+  {keys:["蚵仔米粉"],kcal:500,p:18,c:64,f:18,fi:3,label:"蚵仔米粉 1碗"},
+  {keys:["米粉湯","新竹米粉"],kcal:420,p:14,c:62,f:12,fi:2,label:"米粉湯 1碗"},
+  {keys:["客家粄條","炒粄條"],kcal:520,p:16,c:70,f:18,fi:3,label:"炒粄條 1盤"},
+  {keys:["粄條"],kcal:450,p:12,c:70,f:12,fi:2,label:"粄條 1份"},
+  {keys:["越南河粉","pho"],kcal:450,p:22,c:62,f:10,fi:3,label:"越南河粉 1碗"},
+  {keys:["牛肉河粉"],kcal:520,p:26,c:64,f:14,fi:3,label:"牛肉河粉 1碗"},
+  {keys:["河粉"],kcal:480,p:16,c:70,f:12,fi:2,label:"河粉 1份"},
+  {keys:["豚骨拉麵"],kcal:720,p:32,c:78,f:32,fi:4,label:"豚骨拉麵 1碗"},
+  {keys:["味噌拉麵"],kcal:680,p:28,c:76,f:28,fi:4,label:"味噌拉麵 1碗"},
+  {keys:["醬油拉麵"],kcal:650,p:28,c:78,f:24,fi:4,label:"醬油拉麵 1碗"},
+  {keys:["拉麵"],kcal:650,p:28,c:76,f:26,fi:4,label:"拉麵 1碗"},
+  {keys:["烏龍麵"],kcal:480,p:14,c:78,f:10,fi:3,label:"烏龍麵 1碗"},
+  {keys:["刀削麵"],kcal:520,p:18,c:80,f:12,fi:3,label:"刀削麵 1碗"},
+  {keys:["油潑麵"],kcal:560,p:16,c:78,f:20,fi:3,label:"油潑麵 1碗"},
+  {keys:["奶油義大利麵","白醬義大利麵"],kcal:720,p:22,c:74,f:34,fi:4,label:"奶油義大利麵 1份"},
+  {keys:["青醬義大利麵"],kcal:680,p:20,c:74,f:30,fi:4,label:"青醬義大利麵 1份"},
+  {keys:["番茄義大利麵","紅醬義大利麵"],kcal:600,p:20,c:78,f:20,fi:5,label:"番茄義大利麵 1份"},
+  {keys:["肉醬義大利麵"],kcal:640,p:24,c:76,f:24,fi:5,label:"肉醬義大利麵 1份"},
+  {keys:["義大利麵","義大利面"],kcal:580,p:20,c:72,f:22,fi:4,label:"義大利麵 1份"},
+  {keys:["泡麵","袋麵","維力炸醬麵"],kcal:470,p:10,c:62,f:20,fi:3,label:"泡麵 1包（含調味）"},
+  {keys:["杯麵"],kcal:350,p:8,c:48,f:14,fi:2,label:"杯麵 1杯"},
+  {keys:["科學麵"],kcal:270,p:5,c:36,f:12,fi:1,label:"科學麵 1包"},
+  {keys:["福州乾拌麵","福州拌麵"],kcal:480,p:16,c:70,f:14,fi:3,label:"福州拌麵 1碗"},
+  {keys:["意麵"],kcal:500,p:14,c:70,f:16,fi:3,label:"意麵 1碗"},
 
-  // 主食 / 單品
-  {keys:["地瓜"],kcal:120,p:2,c:28,f:.2,fi:3,label:"地瓜 100g"},
-  {keys:["白飯","飯"],kcal:260,p:5,c:57,f:.5,fi:1,label:"白飯 1碗"},
-  {keys:["雞胸"],kcal:165,p:31,c:0,f:4,fi:0,label:"雞胸 100g"},
-  {keys:["雞腿"],kcal:220,p:24,c:0,f:13,fi:0,label:"雞腿 1份"},
+  // —— 飯／便當 ——
+  {keys:["滷肉飯","魯肉飯","肉燥飯"],kcal:520,p:18,c:68,f:18,fi:2,label:"滷肉飯 1碗"},
+  {keys:["焢肉飯","控肉飯"],kcal:680,p:24,c:70,f:30,fi:3,label:"焢肉飯 1碗"},
+  {keys:["嘉義雞肉飯","火雞肉飯","雞肉飯"],kcal:480,p:24,c:62,f:14,fi:2,label:"雞肉飯／火雞肉飯 1碗"},
+  {keys:["鴨肉飯"],kcal:520,p:24,c:62,f:18,fi:2,label:"鴨肉飯 1碗"},
+  {keys:["雞腿飯"],kcal:680,p:32,c:78,f:24,fi:4,label:"雞腿飯 1份"},
+  {keys:["排骨飯"],kcal:700,p:28,c:80,f:26,fi:4,label:"排骨飯 1份"},
+  {keys:["魚排飯"],kcal:650,p:28,c:78,f:22,fi:4,label:"魚排飯 1份"},
+  {keys:["豬排飯","炸排骨飯"],kcal:700,p:30,c:78,f:28,fi:3,label:"豬排飯 1份"},
+  {keys:["燒肉飯","烤肉飯"],kcal:620,p:28,c:72,f:22,fi:3,label:"燒肉飯 1碗"},
+  {keys:["叉燒飯"],kcal:600,p:26,c:70,f:20,fi:2,label:"叉燒飯 1碗"},
+  {keys:["日式咖哩飯","雞肉咖哩","咖哩飯"],kcal:650,p:22,c:88,f:20,fi:5,label:"咖哩飯 1份"},
+  {keys:["蘑菇燴飯","滑蛋飯","燴飯"],kcal:600,p:20,c:76,f:22,fi:3,label:"燴飯 1份"},
+  {keys:["蛋包飯"],kcal:620,p:22,c:78,f:24,fi:3,label:"蛋包飯 1份"},
+  {keys:["揚州炒飯"],kcal:580,p:18,c:72,f:22,fi:3,label:"揚州炒飯 1盤"},
+  {keys:["蝦仁炒飯"],kcal:560,p:18,c:70,f:20,fi:3,label:"蝦仁炒飯 1盤"},
+  {keys:["蛋炒飯"],kcal:530,p:16,c:70,f:18,fi:2,label:"蛋炒飯 1盤"},
+  {keys:["炒飯"],kcal:550,p:16,c:70,f:20,fi:3,label:"炒飯 1盤"},
+  {keys:["鰻魚飯"],kcal:680,p:28,c:82,f:24,fi:3,label:"鰻魚飯 1份"},
+  {keys:["豬排丼"],kcal:700,p:32,c:80,f:26,fi:3,label:"豬排丼 1碗"},
+  {keys:["牛丼"],kcal:620,p:28,c:72,f:22,fi:2,label:"牛丼 1碗"},
+  {keys:["親子丼"],kcal:580,p:28,c:70,f:16,fi:2,label:"親子丼 1碗"},
+  {keys:["糯米飯","紫米飯"],kcal:280,p:6,c:58,f:2,fi:2,label:"糯米／紫米飯 1碗"},
+  {keys:["白飯","飯"],generic:true,kcal:260,p:5,c:57,f:.5,fi:1,label:"白飯 1碗"},
+  {keys:["雞腿便當"],kcal:720,p:35,c:82,f:27,fi:7,label:"雞腿便當 1份"},
+  {keys:["排骨便當"],kcal:760,p:32,c:85,f:31,fi:6,label:"排骨便當 1份"},
+  {keys:["雞胸便當","雞胸餐盒"],kcal:580,p:42,c:75,f:12,fi:7,label:"雞胸便當 1份"},
+  {keys:["魚排便當","鯖魚便當"],kcal:720,p:32,c:80,f:28,fi:6,label:"魚排便當 1份"},
+  {keys:["豬排便當"],kcal:760,p:32,c:84,f:32,fi:5,label:"豬排便當 1份"},
+  {keys:["滷肉便當"],kcal:700,p:26,c:82,f:26,fi:5,label:"滷肉便當 1份"},
+  {keys:["燒肉便當"],kcal:740,p:32,c:82,f:30,fi:5,label:"燒肉便當 1份"},
+  {keys:["蔬菜便當"],kcal:520,p:18,c:72,f:16,fi:10,label:"蔬菜便當 1份"},
+  {keys:["鮭魚便當"],kcal:680,p:36,c:78,f:22,fi:6,label:"鮭魚便當 1份"},
+  {keys:["健康餐盒","健身餐盒","水煮餐盒"],kcal:550,p:38,c:55,f:14,fi:8,label:"健康／健身餐盒 1份"},
+  {keys:["池上便當","鐵路便當"],kcal:680,p:28,c:84,f:22,fi:6,label:"池上／鐵路便當 1份"},
+  {keys:["自助餐","自助餐便當"],kcal:700,p:30,c:78,f:28,fi:8,label:"自助餐 1份（估）"},
+  {keys:["便當"],kcal:650,p:30,c:80,f:24,fi:6,label:"一般便當 1份"},
+  {keys:["綜合壽司","握壽司","壽司"],kcal:350,p:12,c:58,f:6,fi:2,label:"壽司 約6貫"},
+  {keys:["手捲","海苔手卷"],kcal:220,p:8,c:32,f:6,fi:2,label:"手捲 1條"},
 
-  // 麻辣／火鍋配菜（避免「鴨血豆腐」被誤判成單純「豆腐」）
+  // —— 滷味／麻辣／火鍋 ——
   {keys:["麻辣鴨血豆腐","鴨血豆腐"],kcal:320,p:22,c:8,f:22,fi:2,label:"麻辣鴨血豆腐 1份（約小份盤）"},
   {keys:["麻辣鴨血","鴨血"],kcal:180,p:18,c:2,f:12,fi:0,label:"麻辣鴨血 1份"},
   {keys:["麻辣臭豆腐","臭豆腐"],kcal:380,p:16,c:22,f:26,fi:3,label:"臭豆腐／麻辣臭豆腐 1份"},
-  {keys:["麻辣燙"],kcal:550,p:28,c:45,f:28,fi:6,label:"麻辣燙 1份（含湯料）"},
-  {keys:["麻辣鍋","麻辣火鍋"],kcal:750,p:35,c:40,f:48,fi:5,label:"麻辣鍋 1人份（估）"},
-  {keys:["滷味"],kcal:420,p:24,c:20,f:28,fi:3,label:"滷味拼盤 1份"},
-  {keys:["滷肉飯","肉燥飯"],kcal:520,p:18,c:68,f:18,fi:2,label:"滷肉飯 1碗"},
-  {keys:["雞排"],kcal:480,p:32,c:28,f:28,fi:1,label:"炸雞排 1份"},
-  {keys:["鹽酥雞"],kcal:450,p:28,c:22,f:30,fi:1,label:"鹽酥雞 1份"},
-  {keys:["蚵仔煎"],kcal:420,p:18,c:32,f:24,fi:2,label:"蚵仔煎 1份"},
-  {keys:["肉圓"],kcal:350,p:12,c:48,f:12,fi:2,label:"肉圓 1顆"},
   {keys:["臭豆腐鍋"],kcal:600,p:24,c:30,f:40,fi:4,label:"臭豆腐鍋 1人份（估）"},
+  {keys:["麻辣燙"],kcal:550,p:28,c:45,f:28,fi:6,label:"麻辣燙 1份（含湯料）"},
+  {keys:["麻辣干鍋","干鍋"],kcal:650,p:30,c:28,f:42,fi:5,label:"麻辣干鍋 1份"},
+  {keys:["麻辣鍋","麻辣火鍋"],kcal:750,p:35,c:40,f:48,fi:5,label:"麻辣鍋 1人份（估）"},
+  {keys:["冒菜"],kcal:600,p:26,c:40,f:34,fi:5,label:"冒菜 1份"},
+  {keys:["滷味拼盤","滷味"],kcal:420,p:24,c:20,f:28,fi:3,label:"滷味拼盤 1份"},
+  {keys:["滷豆干","滷豆乾"],kcal:90,p:8,c:4,f:5,fi:2,label:"滷豆干 1塊"},
+  {keys:["豆干","豆乾"],kcal:80,p:8,c:3,f:4,fi:2,label:"豆干 1份"},
+  {keys:["滷海帶","海帶結","海帶"],kcal:40,p:2,c:6,f:0,fi:3,label:"海帶／海帶結 1份"},
+  {keys:["百頁豆腐","百葉豆腐"],kcal:180,p:12,c:6,f:12,fi:1,label:"百頁豆腐 1份"},
+  {keys:["米血糕","米血"],kcal:160,p:6,c:22,f:6,fi:1,label:"米血 1份"},
+  {keys:["豆皮"],kcal:90,p:8,c:3,f:5,fi:1,label:"豆皮 1份"},
+  {keys:["麵筋"],kcal:120,p:6,c:16,f:4,fi:2,label:"麵筋 1份"},
+  {keys:["小火鍋"],kcal:600,p:28,c:36,f:32,fi:4,label:"小火鍋 1人份（估）"},
+  {keys:["涮涮鍋"],kcal:550,p:32,c:28,f:28,fi:4,label:"涮涮鍋 1人份（估）"},
+  {keys:["石頭火鍋"],kcal:700,p:32,c:36,f:40,fi:4,label:"石頭火鍋 1人份（估）"},
+  {keys:["牛奶鍋"],kcal:720,p:28,c:32,f:48,fi:3,label:"牛奶鍋 1人份（估）"},
+  {keys:["昆布鍋"],kcal:480,p:26,c:24,f:24,fi:3,label:"昆布鍋 1人份（估）"},
+  {keys:["酸菜白肉鍋"],kcal:650,p:30,c:22,f:42,fi:4,label:"酸菜白肉鍋 1人份（估）"},
+  {keys:["火鍋"],kcal:650,p:30,c:32,f:38,fi:4,label:"火鍋 1人份（估）"},
+  {keys:["薑母鴨"],kcal:650,p:36,c:12,f:48,fi:2,label:"薑母鴨 1人份（估）"},
+  {keys:["麻油雞"],kcal:620,p:34,c:10,f:46,fi:1,label:"麻油雞 1人份（估）"},
+  {keys:["燒酒雞"],kcal:600,p:34,c:10,f:42,fi:1,label:"燒酒雞 1人份（估）"},
+  {keys:["羊肉爐"],kcal:700,p:38,c:14,f:50,fi:2,label:"羊肉爐 1人份（估）"},
+  {keys:["藥燉排骨","十全排骨"],kcal:580,p:32,c:16,f:38,fi:2,label:"藥燉排骨 1份"},
+  {keys:["當歸鴨"],kcal:520,p:30,c:10,f:36,fi:1,label:"當歸鴨 1份"},
   {keys:["麻婆豆腐"],kcal:280,p:16,c:12,f:18,fi:2,label:"麻婆豆腐 1份"},
   {keys:["皮蛋豆腐"],kcal:180,p:12,c:6,f:12,fi:1,label:"皮蛋豆腐 1份"},
-  {keys:["豆腐腦","豆花"],kcal:140,p:8,c:22,f:3,fi:1,label:"豆花／豆腐腦 1碗"},
   {keys:["油豆腐"],kcal:160,p:10,c:6,f:11,fi:1,label:"油豆腐 1份"},
+  {keys:["豆腐腦"],kcal:140,p:8,c:22,f:3,fi:1,label:"豆腐腦 1碗"},
+  {keys:["豆腐"],generic:true,kcal:85,p:8,c:2,f:5,fi:1,label:"豆腐 100g"},
+
+  // —— 夜市／小吃 ——
+  {keys:["起司雞排","香雞排","炸雞排","雞排"],kcal:480,p:32,c:28,f:28,fi:1,label:"炸雞排 1份"},
+  {keys:["鹽酥雞","鹹酥雞"],kcal:450,p:28,c:22,f:30,fi:1,label:"鹽酥雞 1份"},
+  {keys:["卡啦雞","卡拉雞"],kcal:480,p:28,c:24,f:30,fi:1,label:"卡啦雞 1份"},
+  {keys:["炸雞","脆皮炸雞"],kcal:460,p:28,c:18,f:30,fi:1,label:"炸雞 1份"},
+  {keys:["雞米花"],kcal:350,p:18,c:22,f:20,fi:1,label:"雞米花 1份"},
+  {keys:["蚵仔煎"],kcal:420,p:18,c:32,f:24,fi:2,label:"蚵仔煎 1份"},
+  {keys:["蝦仁煎"],kcal:400,p:18,c:30,f:22,fi:2,label:"蝦仁煎 1份"},
+  {keys:["彰化肉圓","肉圓"],kcal:350,p:12,c:48,f:12,fi:2,label:"肉圓 1顆"},
+  {keys:["大腸包小腸"],kcal:450,p:16,c:48,f:22,fi:3,label:"大腸包小腸 1份"},
+  {keys:["胡椒餅"],kcal:320,p:12,c:38,f:14,fi:2,label:"胡椒餅 1個"},
+  {keys:["車輪餅","紅豆餅"],kcal:220,p:5,c:36,f:7,fi:2,label:"車輪餅／紅豆餅 1個"},
+  {keys:["雞蛋糕","雞蛋仔"],kcal:250,p:8,c:36,f:8,fi:1,label:"雞蛋糕 1份"},
+  {keys:["章魚燒","章魚小丸子"],kcal:380,p:12,c:42,f:16,fi:2,label:"章魚燒 1份"},
+  {keys:["地瓜球"],kcal:280,p:3,c:42,f:12,fi:3,label:"地瓜球 1份"},
+  {keys:["關東煮"],kcal:250,p:14,c:28,f:8,fi:2,label:"關東煮 約4-5樣"},
+  {keys:["甜不辣","基隆甜不辣"],kcal:150,p:6,c:18,f:6,fi:1,label:"甜不辣 1份"},
+  {keys:["黑輪","旗魚黑輪"],kcal:120,p:6,c:14,f:4,fi:1,label:"黑輪 1份"},
+  {keys:["鹹水雞"],kcal:280,p:32,c:4,f:16,fi:0,label:"鹹水雞 1份"},
+  {keys:["白斬雞","油雞"],kcal:320,p:32,c:2,f:20,fi:0,label:"白斬雞 1份"},
+  {keys:["烤香腸"],kcal:220,p:10,c:8,f:16,fi:0,label:"烤香腸 1條"},
+  {keys:["烤玉米"],kcal:180,p:5,c:34,f:3,fi:4,label:"烤玉米 1支"},
+  {keys:["糯米腸","米腸"],kcal:250,p:6,c:36,f:8,fi:1,label:"糯米腸 1條"},
+  {keys:["大腸"],kcal:180,p:8,c:2,f:16,fi:0,unless:/面線|包小腸/,label:"滷大腸 1份"},
+  {keys:["炸魷魚","烤魷魚"],kcal:350,p:24,c:18,f:18,fi:1,label:"炸／烤魷魚 1份"},
+  {keys:["蚵嗲","蝦嗲","肉嗲"],kcal:280,p:10,c:28,f:14,fi:2,label:"蚵嗲／蝦嗲 1份"},
+  {keys:["蝦捲","蝦卷"],kcal:220,p:10,c:18,f:12,fi:1,label:"蝦捲 約2條"},
+  {keys:["春捲","炸春捲"],kcal:200,p:6,c:22,f:10,fi:2,label:"春捲 1捲"},
+  {keys:["潤餅"],kcal:380,p:12,c:48,f:14,fi:5,label:"潤餅 1捲"},
+  {keys:["刈包","割包","虎咬豬"],kcal:420,p:18,c:42,f:18,fi:3,label:"刈包 1個"},
+  {keys:["棺材板"],kcal:550,p:16,c:58,f:26,fi:3,label:"棺材板 1份"},
+  {keys:["北部粽"],kcal:420,p:14,c:58,f:14,fi:3,label:"北部粽 1顆"},
+  {keys:["南部粽"],kcal:360,p:12,c:52,f:10,fi:3,label:"南部粽 1顆"},
+  {keys:["肉粽","粽子","粽"],kcal:380,p:12,c:54,f:12,fi:3,label:"肉粽 1顆"},
+  {keys:["花生捲冰淇淋"],kcal:280,p:6,c:36,f:12,fi:2,label:"花生捲冰淇淋 1份"},
+  {keys:["薯條"],kcal:320,p:4,c:42,f:16,fi:4,label:"薯條 1份"},
+  {keys:["雞塊"],kcal:280,p:14,c:20,f:16,fi:1,label:"雞塊 約5-6塊"},
+  {keys:["雞翅","烤雞翅","炸雞翅"],kcal:250,p:16,c:8,f:16,fi:0,label:"雞翅 2支"},
+  {keys:["起司條"],kcal:280,p:10,c:24,f:16,fi:1,label:"起司條 1份"},
+  {keys:["花枝羹"],kcal:350,p:20,c:28,f:16,fi:2,label:"花枝羹 1碗"},
+  {keys:["肉羹"],kcal:320,p:18,c:26,f:14,fi:2,label:"肉羹 1碗"},
+  {keys:["魷魚羹"],kcal:340,p:20,c:26,f:16,fi:2,label:"魷魚羹 1碗"},
+  {keys:["蝦仁羹"],kcal:300,p:18,c:24,f:12,fi:2,label:"蝦仁羹 1碗"},
   {keys:["小籠包"],kcal:400,p:18,c:42,f:18,fi:2,label:"小籠包 約4-5顆"},
+  {keys:["湯包","灌湯包"],kcal:380,p:16,c:40,f:16,fi:2,label:"湯包 約4顆"},
   {keys:["煎餃","鍋貼"],kcal:380,p:14,c:42,f:16,fi:2,label:"煎餃／鍋貼 約6顆"},
   {keys:["水餃"],kcal:350,p:16,c:40,f:12,fi:2,label:"水餃 約8顆"},
-  {keys:["炒飯"],kcal:550,p:16,c:70,f:20,fi:3,label:"炒飯 1盤"},
-  {keys:["炒麵"],kcal:520,p:16,c:68,f:18,fi:4,label:"炒麵 1盤"},
-  {keys:["義大利麵","義大利面"],kcal:580,p:20,c:72,f:22,fi:4,label:"義大利麵 1份"},
-  {keys:["壽司"],kcal:350,p:12,c:58,f:6,fi:2,label:"壽司 約6貫"},
-  {keys:["滷雞腿"],kcal:280,p:28,c:4,f:16,fi:0,label:"滷雞腿 1支"},
-  {keys:["貢丸湯","蛋花湯","味噌湯"],kcal:90,p:6,c:4,f:5,fi:0,label:"湯品 1碗"},
-  {keys:["豆腐"],kcal:85,p:8,c:2,f:5,fi:1,label:"豆腐 100g"},
+  {keys:["蒸餃"],kcal:320,p:14,c:40,f:10,fi:2,label:"蒸餃 約6顆"},
+  {keys:["韭菜盒"],kcal:280,p:8,c:32,f:14,fi:3,label:"韭菜盒 1個"},
+  {keys:["蘿蔔絲餅"],kcal:260,p:5,c:34,f:12,fi:3,label:"蘿蔔絲餅 1個"},
+  {keys:["雙胞胎"],kcal:280,p:5,c:32,f:14,fi:1,label:"雙胞胎 1對"},
 
-  // 整份餐點
-  {keys:["雞腿便當"],kcal:720,p:35,c:82,f:27,fi:7,label:"雞腿便當 1份"},
-  {keys:["排骨便當"],kcal:760,p:32,c:85,f:31,fi:6,label:"排骨便當 1份"},
-  {keys:["雞胸便當"],kcal:580,p:42,c:75,f:12,fi:7,label:"雞胸便當 1份"},
-  {keys:["便當"],kcal:650,p:30,c:80,f:24,fi:6,label:"一般便當 1份"}
+  // —— 湯羹 ——
+  {keys:["貢丸湯"],kcal:90,p:6,c:4,f:5,fi:0,label:"貢丸湯 1碗"},
+  {keys:["魚丸湯"],kcal:90,p:6,c:4,f:5,fi:0,label:"魚丸湯 1碗"},
+  {keys:["蛋花湯","番茄蛋花湯","紫菜蛋花湯"],kcal:70,p:5,c:3,f:4,fi:0,label:"蛋花湯 1碗"},
+  {keys:["味噌湯"],kcal:70,p:5,c:4,f:3,fi:1,label:"味噌湯 1碗"},
+  {keys:["餛飩湯"],kcal:180,p:10,c:16,f:8,fi:1,label:"餛飩湯 1碗"},
+  {keys:["酸辣湯"],kcal:120,p:8,c:10,f:6,fi:1,label:"酸辣湯 1碗"},
+  {keys:["蛤蜊湯"],kcal:90,p:10,c:4,f:3,fi:0,label:"蛤蜊湯 1碗"},
+  {keys:["玉米排骨湯"],kcal:180,p:14,c:12,f:8,fi:1,label:"玉米排骨湯 1碗"},
+  {keys:["排骨酥湯"],kcal:220,p:14,c:12,f:12,fi:1,label:"排骨酥湯 1碗"},
+  {keys:["四神湯"],kcal:150,p:10,c:16,f:5,fi:2,label:"四神湯 1碗"},
+  {keys:["豬肝湯"],kcal:140,p:14,c:4,f:7,fi:0,label:"豬肝湯 1碗"},
+  {keys:["台南牛肉湯","牛肉湯"],kcal:200,p:22,c:4,f:10,fi:0,label:"牛肉湯 1碗"},
+  {keys:["玉米濃湯"],kcal:180,p:6,c:18,f:9,fi:2,label:"玉米濃湯 1碗"},
+  {keys:["雞湯"],kcal:120,p:12,c:4,f:6,fi:0,label:"雞湯 1碗"},
+  {keys:["南瓜湯"],kcal:140,p:4,c:22,f:4,fi:3,label:"南瓜湯 1碗"},
+
+  // —— 冰品／甜點 ——
+  {keys:["粉圓豆花","花生豆花","豆花"],kcal:140,p:8,c:22,f:3,fi:1,label:"豆花 1碗"},
+  {keys:["燒仙草","仙草凍","仙草"],kcal:160,p:2,c:36,f:1,fi:2,label:"仙草 1碗"},
+  {keys:["愛玉","愛玉冰"],kcal:80,p:0,c:20,f:0,fi:1,label:"愛玉 1份"},
+  {keys:["芒果冰"],kcal:350,p:4,c:68,f:6,fi:3,label:"芒果冰 1份"},
+  {keys:["草莓冰"],kcal:300,p:4,c:58,f:5,fi:3,label:"草莓冰 1份"},
+  {keys:["八寶冰","八寶刨冰"],kcal:380,p:8,c:72,f:6,fi:4,label:"八寶冰 1份"},
+  {keys:["粉圓冰"],kcal:280,p:2,c:62,f:2,fi:1,label:"粉圓冰 1份"},
+  {keys:["芋頭冰"],kcal:320,p:4,c:60,f:6,fi:3,label:"芋頭冰 1份"},
+  {keys:["刨冰","綿綿冰"],kcal:250,p:2,c:54,f:3,fi:1,label:"刨冰 1份"},
+  {keys:["紅豆湯"],kcal:180,p:6,c:38,f:1,fi:4,label:"紅豆湯 1碗"},
+  {keys:["綠豆湯"],kcal:160,p:8,c:32,f:1,fi:4,label:"綠豆湯 1碗"},
+  {keys:["芝麻湯圓","紅豆湯圓","湯圓"],kcal:280,p:6,c:48,f:8,fi:2,label:"湯圓 約8-10顆"},
+  {keys:["麻糬","草仔粿"],kcal:220,p:3,c:42,f:4,fi:1,label:"麻糬／草仔粿 1份"},
+  {keys:["起司蛋糕","乳酪蛋糕"],kcal:320,p:8,c:28,f:20,fi:0,label:"起司蛋糕 1片"},
+  {keys:["蛋糕"],kcal:280,p:5,c:36,f:13,fi:1,label:"蛋糕 1片"},
+  {keys:["蛋塔","葡式蛋塔"],kcal:230,p:5,c:24,f:13,fi:0,label:"蛋塔 1個"},
+  {keys:["霜淇淋","冰淇淋"],kcal:200,p:4,c:24,f:10,fi:0,label:"冰淇淋 1份"},
+  {keys:["銅鑼燒"],kcal:220,p:5,c:36,f:6,fi:1,label:"銅鑼燒 1個"},
+
+  // —— 蛋白質／配菜／熱炒 ——
+  {keys:["舒肥雞","水煮雞胸"],kcal:165,p:31,c:0,f:4,fi:0,label:"舒肥／水煮雞胸 100g"},
+  {keys:["雞胸"],kcal:165,p:31,c:0,f:4,fi:0,label:"雞胸 100g"},
+  {keys:["滷雞腿"],kcal:280,p:28,c:4,f:16,fi:0,label:"滷雞腿 1支"},
+  {keys:["雞腿"],kcal:220,p:24,c:0,f:13,fi:0,label:"雞腿 1份"},
+  {keys:["鯖魚","烤鯖魚"],kcal:250,p:22,c:0,f:18,fi:0,label:"鯖魚 1片"},
+  {keys:["鮭魚","烤鮭魚"],kcal:280,p:26,c:0,f:18,fi:0,label:"鮭魚 1片"},
+  {keys:["炸豬排","豬排"],kcal:450,p:28,c:22,f:28,fi:1,label:"炸豬排 1份"},
+  {keys:["三杯雞"],kcal:380,p:32,c:8,f:24,fi:1,label:"三杯雞 1份"},
+  {keys:["宮保雞丁"],kcal:360,p:28,c:16,f:18,fi:2,label:"宮保雞丁 1份"},
+  {keys:["糖醋排骨"],kcal:420,p:24,c:28,f:22,fi:1,label:"糖醋排骨 1份"},
+  {keys:["客家小炒"],kcal:350,p:18,c:16,f:24,fi:3,label:"客家小炒 1份"},
+  {keys:["蒜泥白肉","白切肉"],kcal:280,p:22,c:4,f:20,fi:0,label:"蒜泥白肉 1份"},
+  {keys:["炒青菜","清炒時蔬"],kcal:80,p:3,c:8,f:4,fi:4,label:"炒青菜 1份"},
+  {keys:["地瓜葉"],kcal:70,p:3,c:8,f:3,fi:4,label:"地瓜葉 1份"},
+  {keys:["空心菜"],kcal:90,p:3,c:6,f:6,fi:3,label:"空心菜 1份"},
+  {keys:["高麗菜"],kcal:80,p:3,c:8,f:4,fi:3,label:"高麗菜 1份"},
+  {keys:["雞胸沙拉"],kcal:350,p:32,c:18,f:14,fi:5,label:"雞胸沙拉 1份"},
+  {keys:["凱薩沙拉"],kcal:420,p:16,c:18,f:30,fi:4,label:"凱薩沙拉 1份"},
+  {keys:["沙拉"],kcal:280,p:12,c:16,f:16,fi:5,label:"沙拉 1份"},
+  {keys:["地瓜"],kcal:120,p:2,c:28,f:.2,fi:3,label:"地瓜 100g"}
 ];
+
 
 const SIDES={kcal:300,p:24,c:14,f:17,fi:5};
 
@@ -447,24 +784,84 @@ function preview(e){
   };
   r.readAsDataURL(f);
 }
-function stapleFor(name){
-  const clean=(name||"").trim();
+const HEURISTICS=[
+  {re:/珍珠奶茶|波霸奶茶|珍奶|奶茶|鮮奶茶|手搖|含糖飲料|飲料|冰沙|果汁|汽水|可樂/,kcal:320,p:3,c:55,f:9,fi:0,tag:"含糖飲料"},
+  {re:/拿鐵|咖啡|美式|摩卡|卡布/,kcal:120,p:6,c:10,f:6,fi:0,tag:"咖啡"},
+  {re:/奶蓋|蜂蜜|檸檬|冬瓜|百香|柚子|多多|有糖/,kcal:160,p:1,c:40,f:1,fi:0,tag:"調味茶飲"},
+  {re:/茶/,kcal:8,p:0,c:2,f:0,fi:0,tag:"茶飲"},
+  {re:/便當|餐盒|自助餐/,kcal:650,p:30,c:80,f:24,fi:6,tag:"便當／餐盒"},
+  {re:/火鍋|麻辣燙|涮涮鍋|小火鍋/,kcal:700,p:32,c:40,f:42,fi:5,tag:"火鍋／麻辣燙"},
+  {re:/麻辣/,kcal:450,p:22,c:22,f:28,fi:3,tag:"麻辣類"},
+  {re:/滷味|滷/,kcal:400,p:22,c:18,f:24,fi:3,tag:"滷味類"},
+  {re:/鹽酥|鹹酥|雞排|炸/,kcal:480,p:28,c:28,f:28,fi:1,tag:"油炸類"},
+  {re:/炒面|炒米粉|炒粄條/,kcal:520,p:16,c:68,f:18,fi:4,tag:"炒麵／炒米粉"},
+  {re:/炒飯/,kcal:550,p:16,c:70,f:20,fi:3,tag:"炒飯"},
+  {re:/炒/,kcal:460,p:22,c:28,f:26,fi:4,tag:"炒物"},
+  {re:/蛋餅|抓餅|蔥油餅|手抓餅|煎餅/,kcal:380,p:12,c:40,f:18,fi:2,tag:"餅類早餐"},
+  {re:/飯糰|飯團|御飯糰/,kcal:430,p:11,c:68,f:13,fi:3,tag:"飯糰"},
+  {re:/面線|面|粄條|米粉|河粉/,kcal:500,p:18,c:72,f:16,fi:4,tag:"麵食"},
+  {re:/粥|稀飯/,kcal:220,p:10,c:38,f:4,fi:1,tag:"粥品"},
+  {re:/羹/,kcal:350,p:18,c:28,f:16,fi:2,tag:"羹類"},
+  {re:/湯/,kcal:160,p:10,c:8,f:8,fi:1,tag:"湯品"},
+  {re:/飯|丼|燴飯/,kcal:550,p:22,c:70,f:18,fi:3,tag:"飯類餐點"},
+  {re:/冰|甜點|蛋糕|豆花|仙草|愛玉|布丁/,kcal:280,p:6,c:48,f:8,fi:1,tag:"冰品／甜點"},
+  {re:/沙拉/,kcal:320,p:22,c:18,f:16,fi:5,tag:"沙拉／輕食"},
+  {re:/蛋/,kcal:90,p:7,c:1,f:6,fi:0,tag:"蛋類"}
+];
+
+function leftoverOf(clean,k){
+  return clean.split(k).join("");
+}
+
+function matchStaple(clean){
   const pairs=[];
   for(const s of staples){
-    for(const k of s.keys) pairs.push({k,s});
+    for(const rawK of s.keys){
+      const k=normalizeFoodName(rawK);
+      if(k) pairs.push({k,s});
+    }
   }
   pairs.sort((a,b)=>b.k.length-a.k.length);
   for(const {k,s} of pairs){
-    // Prefer dish names containing the key (longest first).
-    // Short generic keys like 豆腐/飯 must not steal long dishes.
+    if(s.unless && s.unless.test(clean)) continue;
     if(clean.includes(k)){
-      if(k.length<=2 && clean.length>=k.length+3) continue;
-      return s;
+      // Short generic keys like 豆腐/飯 must not steal long compound dishes.
+      if(isGenericKey(k,s)){
+        const leftover=leftoverOf(clean,k);
+        if(leftover && !isWeakLeftover(leftover)) continue;
+      }else if(k.length<=2){
+        const leftover=leftoverOf(clean,k);
+        // Allow a 1-char cooking prefix (炸雞排) but skip compound leftovers (番茄炒蛋).
+        if(leftover && leftover.length>=2 && !isWeakLeftover(leftover)) continue;
+      }
+      return Object.assign({rough:false}, s);
     }
-    // Reverse match only for near-aliases (e.g. 鴨血豆腐 ≈ 麻辣鴨血豆腐), never bare 豆腐.
-    if(clean.length>=3 && k.includes(clean) && (k.length-clean.length)<=2) return s;
   }
-  return {kcal:350,p:15,c:45,f:12,fi:3,label:"未辨識食物，採一般單品 1 份估算（可手動調整熱量）"};
+  return null;
+}
+
+function heuristicFor(clean, rawName){
+  for(const h of HEURISTICS){
+    if(h.re.test(clean)){
+      return {
+        kcal:h.kcal,p:h.p,c:h.c,f:h.f,fi:h.fi,rough:true,
+        label:"粗估："+h.tag+" 1份（「"+rawName+"」未建檔，可手動調整熱量）"
+      };
+    }
+  }
+  return {
+    kcal:350,p:15,c:45,f:12,fi:3,rough:true,
+    label:"粗估：一般單品 1份（「"+rawName+"」未辨識，可手動調整熱量）"
+  };
+}
+
+function stapleFor(name){
+  const raw=(name||"").trim();
+  const clean=normalizeFoodName(raw);
+  if(!clean) return heuristicFor("", raw||"");
+  const hit=matchStaple(clean);
+  if(hit) return hit;
+  return heuristicFor(clean, raw);
 }
 function renderEstimateUI(){
   if(!currentEstimate)return;
@@ -475,9 +872,9 @@ function renderEstimateUI(){
   document.getElementById("eF").textContent=currentEstimate.f;
   document.getElementById("eFi").textContent=currentEstimate.fi;
   const name=currentEstimate.name||"";
-  const spread = /豆漿|鮮奶|牛奶|蛋$|茶葉蛋|滷蛋|美式|咖啡|濃縮|無糖茶|綠茶|烏龍|紅茶|麥茶/.test(name) ? 0.10 : 0.15;
+  const spread = currentEstimate.rough ? 0.25 : (/豆漿|鮮奶|牛奶|蛋$|茶葉蛋|滷蛋|美式|咖啡|濃縮|無糖茶|綠茶|烏龍|紅茶|麥茶/.test(name) ? 0.10 : 0.15);
   document.getElementById("rangeText").textContent=
-    `合理範圍約 ${Math.round(currentEstimate.kcal*(1-spread))}～${Math.round(currentEstimate.kcal*(1+spread))} kcal`;
+    `${currentEstimate.rough?"粗估範圍約":"合理範圍約"} ${Math.round(currentEstimate.kcal*(1-spread))}～${Math.round(currentEstimate.kcal*(1+spread))} kcal`;
   document.getElementById("basisText").textContent="估算基準："+currentEstimate.basis;
 }
 function applyKcalScale(newKcal){
@@ -522,7 +919,8 @@ function estimateMeal(){
     c:Math.round(c),
     f:Math.round(f),
     fi:Math.round(fi),
-    basis
+    basis,
+    rough:!!s.rough
   };
   estimateBase={...currentEstimate};
 
@@ -791,7 +1189,7 @@ function exportBackup(){
   try{
     const payload={
       app:"slim-plate",
-      version:"V2.4",
+      version:"V2.5",
       exportedAt:new Date().toISOString(),
       state:state
     };
